@@ -14,7 +14,7 @@ Instructions on how to create your own by hand.
 
 You have two options:
 
-1. Follow these ok instructions: [Catfinder5000 Static Webstite Hosting](catfinder5000/LAB/1_StaticWebHosting/README.md)
+1. Follow these ok instructions: [Catfinder5000 Static Webstite Hosting](../catfinder5000/LAB/1_StaticWebHosting/README.md)
 
 2. You can ue my python script: [create_bucket.py](catfinder5003-createchannel/create_bucket.py)
 

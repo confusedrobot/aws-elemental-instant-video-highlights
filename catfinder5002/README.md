@@ -1,6 +1,6 @@
 # catfinder5002 "Content Aware Ads"
 
-This is also known as "Ad Kitten" shown at CES2017, this uses the catfinder5002-parse's DynamoDB "summary" table with the catfinder5002-ads code that simulates an ADS server for AWS Elemental MediaTailor. The website is used to demostrate the end to end and is optional. 
+This is also known as "Ad Kitten" shown at CES2017, this uses the catfinder5002-parse's DynamoDB "summary" table with the catfinder5002-ads code that simulates an ADS server for AWS Elemental MediaTailor. The website is used to demostrate the end to end and is optional.
 
 ![catfinder5002 diagram](catfinder5002.png)
 

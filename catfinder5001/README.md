@@ -1,10 +1,49 @@
 # catfinder5001 "the original"
 
+<!-- TOC -->
+
+- [catfinder5001 "the original"](#catfinder5001-the-original)
+    - [How to Deploy](#how-to-deploy)
+        - [Fully Automatic](#fully-automatic)
+            - [CloudFormation Tempate](#cloudformation-tempate)
+        - [Step-by-step](#step-by-step)
+            - [Create S3 Bucket](#create-s3-bucket)
+            - [Create MediaLive and MediaPackage Channels](#create-medialive-and-mediapackage-channels)
+            - [Create DynamoDB Tables](#create-dynamodb-tables)
+            - [Create Lambda Functions](#create-lambda-functions)
+    - [The Lambda Functions](#the-lambda-functions)
+        - [catfinder5001-parse](#catfinder5001-parse)
+        - [catfinder5001-prekog](#catfinder5001-prekog)
+        - [catfinder5001-vod](#catfinder5001-vod)
+        - [catfinder5001-website](#catfinder5001-website)
+
+<!-- /TOC -->
+
 This is a refactor of the original "catfinder 5000" shown at re:Invent 2017 that used AWS Elemental Delta to now use the new AWS Media Services. The OG CF5k required a polling technique on the HLS manifest, which now with CF5k1 we can use the seamless integration of AWS Elemental MediaLive with S3 and AWS Elemental MediaPackage in place of AWS Elemental Delta.
 
 ![catfinder5001 diagram](catfinder5001.png)
 
 ## How to Deploy
+
+### Fully Automatic
+
+#### CloudFormation Tempate
+
+|Region|Launch Template|
+|---|---|
+|**N. Virginia** (us-east-1)|[![Launch](catfinder5001-cloudformation/deploy-to-aws.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=catfinder5001&templateURL=https://s3.amazonaws.com/cf5k-us-east-1/cloudformation/CoreAllResources.json)|
+
+Parameters:
+
+1. *EnablePrekog* - Indicates whether a label is to be matched
+
+1. *HLSPrimarySource* - URL of the primary HLS pull source
+
+1. *HLSSecondarySource* - URL of the secondary HLS pull source ( can be same as Primary )
+
+1. *RekogLabel* - If Prekog enabled, this is the label to search for ( Totes needs to be "Cat" )
+
+**Note:** MediaLive has a 5 channel maximum and this will use 2 of the 10 channel maximum for MediaPackage.
 
 ### Step-by-step
 
@@ -41,12 +80,6 @@ You have two options:
 1. Follow these ok instructions: [Catfinder5000 Lambda](../catfinder5000/LAB/3_Lambda/README.md)
 
 1. Do your own method of deploying Lambdas. You can do what you want, I ain't the boss of you.
-
-### Fully Automatic
-
-#### CloudFormation Tempate
-
-Standby... I'm ironing out the security policies. fun times...
 
 ## The Lambda Functions
 

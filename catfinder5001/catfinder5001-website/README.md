@@ -1,8 +1,6 @@
-# catfinder5000 website
+# catfinder5001 website
 
 ## Overview
-
-![](../images/catfinder5000-websitediag.png)
 
 1. A static webpage is generated from the JSON information stored in S3
 

@@ -2,8 +2,6 @@
 
 ## Overview
 
-![](../images/catfinder5000-prekogdiag.png)
-
 ### Overview of Prekog lambda
 
 “Prekog” lambda script to:
@@ -18,9 +16,11 @@ This is a seperate Lambda Function from the "parse" so that it can be run in par
 
 ## Code Steps
 
+1. describe MediaPackage channel to get info
+
 1. start of archive
 
-    1. get 1 entry before in DynamoDB 
+    1. get 1 entry before in DynamoDB
 
     1. check to see if a "Cat" label exists
 
@@ -32,7 +32,7 @@ This is a seperate Lambda Function from the "parse" so that it can be run in par
 
 1. end of archive
 
-    1. get 1 entry after in DynamoDB 
+    1. get 1 entry after in DynamoDB
 
     1. check to see if a "Cat" label exists
 
@@ -42,21 +42,25 @@ This is a seperate Lambda Function from the "parse" so that it can be run in par
 
     1. identify timestamp for end of archive
 
-1. send XML with start/end times to Delta REST
+1. generate URL params for Time Shifted feature of MediaPackage
 
 1. parse response to DyanamoDB table for website
+
+1. invoke catfinder5001-vod Lambda for Frame Accurate archive
 
 ## Environment Variables
 
 ### Mandatory
 
-*DELTA_URL*
+*CHANNEL_NAME* = MediaPackage Channel Name
 
-*DELTA_CONTENTNAME*
+*LAMBDA_VOD* = Lambda Function Name for catfinder5001-vod
+
+*DYNAMO_MAIN* = DynamoDB Table name for main
+
+*S3_BUCKET* = S3 bucket name to pass to catfinder5001-vod
 
 ### Optional
-
-*DYNAMO_MAIN* = "catfinder5000-main"
 
 *DYNAMO_MAIN_GSI* = "id_type-id_filename-index"
 

@@ -38,7 +38,7 @@ You have two options:
 
 You have two options:
 
-1. Follow these ok instructions: [Catfinder5000 Lambda](../catfinder5000/LAB/3_lambda/README.md)
+1. Follow these ok instructions: [Catfinder5000 Lambda](../catfinder5000/LAB/3_Lambda/README.md)
 
 1. Do your own method of deploying Lambdas. You can do what you want, I ain't the boss of you.
 

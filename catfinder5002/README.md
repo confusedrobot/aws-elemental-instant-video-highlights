@@ -14,7 +14,7 @@ Instructions on how to create your own by hand.
 
 You have two options:
 
-1. Follow these ok instructions: [Catfinder5000 Static Webstite Hosting](catfinder5000/LAB/1_StaticWebHosting/README.md)
+1. Follow these ok instructions: [Catfinder5000 Static Webstite Hosting](../catfinder5000/LAB/1_StaticWebHosting/README.md)
 
 2. You can ue my python script: [create_bucket.py](catfinder5002-createchannel/create_bucket.py)
 
@@ -24,7 +24,7 @@ You have two options:
 
 1. Follow these awesome instructions: [AWS Live Streaming and Live-to-VOD Workshop](https://github.com/aws-samples/aws-media-services-simple-live-workflow)
 
-1. If you already have solid IAM Roles, you can use my python script [create_channel.py](catfinder5002-createchannel/create_channel.py)
+1. If you already have solid IAM Roles, you can use my python script [create_channel.py](../catfinder5002-createchannel/create_channel.py)
 
 #### Create DynamoDB Tables
 
@@ -32,7 +32,7 @@ You have two options:
 
 1. Follow these ok instructions: [Catfinder5000 DynamoDB](../catfinder5000/LAB/2_DynamoDB/README.md)
 
-1. If you already have solid IAM Roles, you can use my python script [create_table.py](catfinder5002-createchannel/create_table.py)
+1. If you already have solid IAM Roles, you can use my python script [create_table.py](../catfinder5002-createchannel/create_table.py)
 
 #### Create Lambda Functions
 

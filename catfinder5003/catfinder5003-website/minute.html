@@ -1,0 +1,670 @@
+<html>
+
+<head>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+<script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>    
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>    
+<link href="https://vjs.zencdn.net/6.6.3/video-js.css" rel="stylesheet">
+<script src="https://vjs.zencdn.net/6.6.3/video.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-contrib-hls/5.12.2/videojs-contrib-hls.js"></script>
+<script>
+    s3_url = '.';
+    emp_url = 'https://cf98fa7b2ee4450e.mediapackage.us-east-1.amazonaws.com/out/v1/02398018d6a648aa992054872edba75c/index.m3u8';
+jQuery(function ($) {
+    $.fn.hScroll = function (amount) {
+        amount = amount || 120;
+        $(this).bind("DOMMouseScroll mousewheel", function (event) {
+            var oEvent = event.originalEvent, 
+                direction = oEvent.detail ? oEvent.detail * -amount : oEvent.wheelDelta, 
+                position = $(this).scrollLeft();
+            position += direction > 0 ? -amount : amount;
+            $(this).scrollLeft(position);
+            event.preventDefault();
+        })
+    };
+});
+    $( document ).ready(function() {
+        add_live();
+        update_list();
+        list_timer = setInterval(update_list, 4000);
+        $('#the_row').hScroll(20); // You can pass (optionally) scrolling amount
+    });
+    function add_live(){
+        console.log('adding live');
+        $('#live').append(' <div class="col-xs-2" id="minute-live"></div>');
+        // TIMELINE
+        $('#minute-live').append('<div class="row" style="margin-top: 60px; margin-bottom: 10px"><div class="col-xs-12"><div class="timeline"></div> <div class="timedot" style="cursor: pointer;"></div><div class="sniptitle" style="cursor: pointer;">Live</div></div></div>');
+        $('#minute-live').append('<div class="row" ><div class="col-xs-12"><div class="panel panel-default"> <div class="panel-body" id="minute-live_body" > </div> </div></div> </div>');
+        // PLAYER
+        $('#minute-live_body').append(' <div id="player_live"></div>');
+        // $('#player_live').append('<div class="row"><div class="col-xs-12" id="carouseldiv_live"></div></div><div class="row"><div class="col-xs-12" id="playerdiv_live" onClick="make_player(\'live\',\'live\',\'live\')">Play</div></div>');
+        $('#player_live').append('<div class="row"><div class="col-xs-12" id="carouseldiv_live" ></div></div><div class="row"><div class="col-xs-12" id="playerdiv_live"></div></div><div class="row"><div class="col-xs-12" id="playertextdiv_live" onClick="make_player(\'live\',\'live\',\'live\')"></div></div>');
+        $('#carouseldiv_live').append('<div class="item active" onClick="make_player(\'live\',\'live\',\'live\')"><img class="img-responsive" src="' + s3_url + '/slate.jpg" alt="..."><div class="carousel-caption"><div id="scene_rekog_slate"><span class="playicon" ></span></div></div></div>');
+        $('#carouseldiv_live').hide();
+        // ACCORDIAN 
+        this_div_id = 'live';
+        $('#minute-' + this_div_id + '_body').append('<div class="panel-group" id="accordion-' + this_div_id + '" role="tablist" aria-multiselectable="false"></div>');
+
+        // AWS Elemental MediaLive
+        $('#accordion-' + this_div_id).append('<div class="panel panel-default"><div class="panel-heading" role="tab" id="accordion-' + this_div_id + '-heading-medialive"><h4 class="panel-title"><a role="button" data-toggle="collapse" data-parent="#accordion-' + this_div_id + '" href="#accordion-' + this_div_id + '-collapse-medialive" aria-expanded="true" aria-controls="accordion-' + this_div_id + '-collapse-transcribe">AWS Elemental MediaLive</a></h4></div><div id="accordion-' + this_div_id + '-collapse-medialive" class="panel-collapse collapse  " role="tabpanel" aria-labelledby="accordion-' + this_div_id + '-heading-medialive"><div id="accordion-' + this_div_id + '-body-medialive" class="panel-body "></div></div></div>');
+        $('#accordion-' + this_div_id + '-body-medialive').append('<div class="row"><div class="col-xs-12 "><h4>Network In</h4></div></div>');
+        $('#accordion-' + this_div_id + '-body-medialive').append('<div class="row"><div class="col-xs-4">Pipeline 0: </div><div id="accordion-' + this_div_id + '-medialive-NetworkIn0" class="col-xs-8">0</div></div>');
+        $('#accordion-' + this_div_id + '-body-medialive').append('<div class="row"><div class="col-xs-4">Pipeline 1: </div><div id="accordion-' + this_div_id + '-medialive-NetworkIn1" class="col-xs-8">0</div></div>');
+
+        $('#accordion-' + this_div_id + '-body-medialive').append('<div class="row"><div class="col-xs-12 "><h4>Network Out</h4></div></div>');
+        $('#accordion-' + this_div_id + '-body-medialive').append('<div class="row"><div class="col-xs-4">Pipeline 0: </div><div id="accordion-' + this_div_id + '-medialive-NetworkOut0" class="col-xs-8">0</div></div>');
+        $('#accordion-' + this_div_id + '-body-medialive').append('<div class="row"><div class="col-xs-4">Pipeline 1: </div><div id="accordion-' + this_div_id + '-medialive-NetworkOut1" class="col-xs-8">0</div></div>');
+        
+        $('#accordion-' + this_div_id + '-body-medialive').append('<div class="row"><div class="col-xs-12 "><h4>Input Video Frame Rate</h4></div></div>');
+        $('#accordion-' + this_div_id + '-body-medialive').append('<div class="row"><div class="col-xs-4">Pipeline 0: </div><div id="accordion-' + this_div_id + '-medialive-InputVideoFrameRate0" class="col-xs-8">0</div></div>');
+        $('#accordion-' + this_div_id + '-body-medialive').append('<div class="row"><div class="col-xs-4">Pipeline 1: </div><div id="accordion-' + this_div_id + '-medialive-InputVideoFrameRate1" class="col-xs-8">0</div></div>');
+        
+        // AWS Elemental MediaPackage
+        $('#accordion-' + this_div_id).append('<div class="panel panel-default"><div class="panel-heading" role="tab" id="accordion-' + this_div_id + '-heading-medipackage"><h4 class="panel-title"><a role="button" data-toggle="collapse" data-parent="#accordion-' + this_div_id + '" href="#accordion-' + this_div_id + '-collapse-medipackage" aria-expanded="true" aria-controls="accordion-' + this_div_id + '-collapse-medipackage">AWS Elemental MediaPackage</a></h4></div><div id="accordion-' + this_div_id + '-collapse-medipackage" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="accordion-' + this_div_id + '-heading-medipackage"><div id="accordion-' + this_div_id + '-body-medipackage" class="panel-body  "></div></div></div>');            
+        $('#accordion-' + this_div_id + '-body-medipackage').append('<div class="row"><div class="col-xs-12 "><h4>Ingress</h4></div></div>');
+        $('#accordion-' + this_div_id + '-body-medipackage').append('<div class="row"><div class="col-xs-4">Bytes: </div><div id="accordion-' + this_div_id + '-medipackage-IngressBytes" class="col-xs-8">0</div></div>');
+        $('#accordion-' + this_div_id + '-body-medipackage').append('<div class="row"><div class="col-xs-4">Response: </div><div id="accordion-' + this_div_id + '-medipackage-IngressResponseTime" class="col-xs-8">0</div></div>');
+        $('#accordion-' + this_div_id + '-body-medipackage').append('<div class="row"><div class="col-xs-12 "><h4>Egress</h4></div></div>');        
+        $('#accordion-' + this_div_id + '-body-medipackage').append('<div class="row"><div class="col-xs-4">Bytes: </div><div id="accordion-' + this_div_id + '-medipackage-EgressBytes" class="col-xs-8">0</div></div>');
+        $('#accordion-' + this_div_id + '-body-medipackage').append('<div class="row"><div class="col-xs-4">Requests: </div><div id="accordion-' + this_div_id + '-medipackage-EgressRequestCount" class="col-xs-8">0</div></div>');
+        $('#accordion-' + this_div_id + '-body-medipackage').append('<div class="row"><div class="col-xs-4">Response: </div><div id="accordion-' + this_div_id + '-medipackage-EgressResponseTime" class="col-xs-8">0</div></div>');
+
+
+
+    // PLAYER -- INNARDS
+    make_player('live', 'live', 'live');
+    }
+    function between(x, min, max) {
+        return x >= min && x <= max;
+    }
+    // PLAYER -- INNARDS
+    active_player = 0
+    function make_player(this_div_id, emp_start, emp_end){
+        // console.log(this_div_id,emp_start,emp_end);
+        if (active_player != 0){
+            if ($('#video_' + active_player).length){
+                // console.log("disposing of: " + active_player);            
+                var oldPlayer = document.getElementById('video_' + active_player);
+                videojs(oldPlayer).dispose();
+                $("#playerdiv_" + active_player).replaceWith('<div class="col-xs-12" id="playerdiv_' + active_player + '"></div>');
+                // $("#playertextdiv_" + active_player).replaceWith('<div class="col-xs-12" id="playertextdiv_' + active_player + '" onClick="make_player(\'live\',\'live\',\'live\')"><b><i>Play</i></b></div>');
+                $('#carouseldiv_' + active_player).show();
+            }else{
+                // console.log(active_player + " did not exist");
+            }
+
+        }
+        if(this_div_id == 'live'){
+            $('#carouseldiv_' + this_div_id).hide();
+            // $("#playerdiv_live").replaceWith('<div class="col-xs-12" id="playerdiv_live"><b><i>Live</i></b></div>');
+            // $("#player_live").prepend('<video id="video_live" class="video-js vjs-default-skin" style="width:100%;" controls><source src="' + emp_url + '" type="application/x-mpegURL"></video>');
+            $("#playertextdiv_live").replaceWith('<div class="col-xs-12" id="playertextdiv_live" onClick="make_player(\'live\',\'live\',\'live\')"></div>');
+            $("#playerdiv_live").replaceWith('<div class="col-xs-12" id="playerdiv_live"><video id="video_live" class="video-js vjs-default-skin" style="width:100%; padding-left: 15px; padding-right: 15px;" controls><source src="' + emp_url + '" type="application/x-mpegURL"></video></div>');
+            
+            var player = videojs('video_live', { controls: true, muted: true, autoplay: true, preload: 'auto', fluid: true } );
+            active_player = this_div_id;
+            // console.log('active_player = ' + active_player);
+        }else{
+            $('#carouseldiv_' + this_div_id).hide();
+            $("#playertextdiv_" + this_div_id).replaceWith('<div class="col-xs-12" id="playertextdiv_' + this_div_id + '" onClick="make_player(\'live\',\'live\',\'live\')"><b>from <i>' + emp_start +  '</i> to <i>' + emp_end + '</i></b></div>');
+            $("#playerdiv_" + this_div_id).replaceWith('<div class="col-xs-12" id="playerdiv_' + this_div_id + '"><video id="video_' + this_div_id + '" class="video-js vjs-default-skin" style="width:100%; padding-left: 15px; padding-right: 15px;" controls><source src="' + emp_url + '?start=' + emp_start + '&end=' + emp_end + '" type="application/x-mpegURL"></video></div>');
+            var player = videojs('video_' + this_div_id, { controls: true, autoplay: true, preload: 'auto', fluid: true } );
+            active_player = this_div_id;
+            // console.log('active_player = ' + active_player);            
+        }
+        
+
+    }
+    run_first_time = 'false';
+    function add_minute(minute){
+        // console.log(minute);
+        this_div_id = minute.timestamp_minute.replace(" ", "-").replace(":","");
+        if ($('#minute-' + this_div_id).length == 0){
+            $('#minutes').prepend(' <div class="col-xs-4 fields" id="minute-' + this_div_id + '"></div>');
+            $('#minute-' + this_div_id ).hide();
+            // TIMELINE
+            $('#minute-' + this_div_id ).append('<div class="row" style="margin-top: 60px; margin-bottom: 10px"><div class="col-xs-12"><div class="timeline"></div> <div class="timedot" style="cursor: pointer;"></div><div class="sniptitle" style="cursor: pointer;">' + minute.timestamp_minute.split(" ")[1] +  '</div></div></div>');
+            $('#minute-' + this_div_id ).append('<div class="row" ><div class="col-xs-12"><div class="panel panel-default"> <div class="panel-body" id="minute-' + this_div_id + '_body" > </div> </div></div> </div>');
+            // PLAYER
+            $('#minute-' + this_div_id + '_body').append(' <div id="player_' + this_div_id + '"></div>');
+            // ACCORDIAN 
+            $('#minute-' + this_div_id + '_body').append('<div class="panel-group" id="accordion-' + this_div_id + '" role="tablist" aria-multiselectable="false"></div>');
+    
+            // TRANSCRIBE and TRANSLATE
+            $('#accordion-' + this_div_id).append('<div class="panel panel-default"><div class="panel-heading" role="tab" id="accordion-' + this_div_id + '-heading-transcribe"><h4 class="panel-title"><a role="button" data-toggle="collapse" data-parent="#accordion-' + this_div_id + '" href="#accordion-' + this_div_id + '-collapse-transcribe" aria-expanded="true" aria-controls="accordion-' + this_div_id + '-collapse-transcribe">Amazon Transcribe and Amazon Translate <span class="badge" id="accordion-' + this_div_id + '-collapse-transcribe_badge">0</span></a></h4></div><div id="accordion-' + this_div_id + '-collapse-transcribe" class="panel-collapse collapse  " role="tabpanel" aria-labelledby="accordion-' + this_div_id + '-heading-transcribe"><div id="accordion-' + this_div_id + '-body-transcribe" class="panel-body services-area"></div></div></div>');
+            // COMPREHEND
+            $('#accordion-' + this_div_id).append('<div class="panel panel-default"><div class="panel-heading" role="tab" id="accordion-' + this_div_id + '-heading-comprehend"><h4 class="panel-title"><a role="button" data-toggle="collapse" data-parent="#accordion-' + this_div_id + '" href="#accordion-' + this_div_id + '-collapse-comprehend" aria-expanded="true" aria-controls="accordion-' + this_div_id + '-collapse-comprehend">Amazon Comprehend <span class="badge" id="accordion-' + this_div_id + '-collapse-comprehend_badge">0</span></a></h4></div><div id="accordion-' + this_div_id + '-collapse-comprehend" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="accordion-' + this_div_id + '-heading-comprehend"><div id="accordion-' + this_div_id + '-body-comprehend" class="panel-body  services-area"></div></div></div>');            
+            // REKOGNITION
+            $('#accordion-' + this_div_id).append('<div class="panel panel-default"><div class="panel-heading" role="tab" id="accordion-' + this_div_id + '-heading-rekognition"><h4 class="panel-title"><a role="button" data-toggle="collapse" data-parent="#accordion-' + this_div_id + '" href="#accordion-' + this_div_id + '-collapse-rekognition" aria-expanded="true" aria-controls="accordion-' + this_div_id + '-collapse-rekognition">Rekognition <span class="badge" id="accordion-' + this_div_id + '-collapse-rekognition_badge">0</span></a></h4></div><div id="accordion-' + this_div_id + '-collapse-rekognition" class="panel-collapse collapse" role="tabpanel" aria-labelledby="accordion-' + this_div_id + '-heading-rekognition"><div id="accordion-' + this_div_id + '-body-rekognition" class="panel-body  services-area"></div></div></div>');            
+            
+            // $('#minute-' + this_div_id + '_body').append('<hr /><h4>Rekognition</h4> <div style="height: 200px; overflow: scroll" id="rekog_' + this_div_id + '"></div> ');
+            // SCENES
+            // $('#minute-' + this_div_id + '_body').append('<hr /><h4>Scenes</h4> <div style="height: 200px; overflow: scroll" id="scenechange_' + this_div_id + '" class="row"></div> ')
+            
+            // TRANSLATE -- INNARDS
+            translate_master_count = 0;
+            comprehend_transcript = "";
+            $('#accordion-' + this_div_id + '-body-transcribe').append('<ul class="nav nav-tabs" id="transcript_tabs_' + this_div_id + '" ></ul>');
+            $('#transcript_tabs_' + this_div_id).append('<li class="active"><a data-toggle="tab" href="#transcript_langs_native_' + this_div_id + '">Native</a></li>');
+            $('#accordion-' + this_div_id + '-body-transcribe').append('<div id="transcript_langs_' + this_div_id + '" class="tab-content"></div>');
+            $.each(minute.transcribe_transcript.transcripts[0], function(  key, value ) {
+                if(key != 'comprehend' && key != 'transcript'){
+                    $('#transcript_tabs_' + this_div_id).append('<li><a data-toggle="tab" href="#transcript_langs_' + key + '_' + this_div_id + '">' + key + '</a></li>');
+                    $('#transcript_langs_' + this_div_id).append('<div id="transcript_langs_' + key + '_' + this_div_id + '" class="tab-pane fade">' + value + '</div>');
+                    // $('#translate_' + this_div_id).append('<div id="transcript_langs_' + key + '_' + this_div_id + '"><h5>' + key + '</h5>' + value + '</div>');
+                    if(key == 'en'){
+                        comprehend_transcript = value;
+                    }
+                }
+                translate_master_count++;
+            });
+            $('#transcript_langs_' + this_div_id).append('<div id="transcript_langs_native_' + this_div_id + '" class="tab-pane fade in active"></div>');
+            emp_start = ''
+            emp_end = ''
+            char_count = 0
+            $.each(minute.transcribe_transcript.items, function(  key, value ) {
+                if(value.type == 'pronunciation'){
+                    $('#transcript_langs_native_' + this_div_id).append(' <span id="transcribe_transcript_' + this_div_id + '_' + char_count + '" onClick="setInOut(\'' + value.emc.start_time + '\',\'' + value.emc.end_time + '\')" style="opacity: ' + value.alternatives[0].confidence + '" >' + value.alternatives[0].content + '</span>');
+                    // $("#transcribe_transcript_" + this_div_id + '_' + char_count).data( "test", { first: parseInt(char_count), last: parseInt(char_count + value.alternatives[0].content.length + 1) } );
+                    // console.log($( "#transcribe_transcript_" + this_div_id + '_' + char_count ).data( "test" ).last);
+
+                    char_count += value.alternatives[0].content.length + 1;
+                    if(emp_start == ''){
+                        emp_start = value.emp.start_time
+                    }
+                    emp_end = value.emp.end_time
+                }
+                if(value.type == 'punctuation'){
+                    $('#transcript_langs_native_' + this_div_id).append('<span style="opacity: 1" >' + value.alternatives[0].content + '</span>');
+                    emp_end = value.emp.end_time   
+                    char_count += value.alternatives[0].content.length;                             
+                }
+                
+                
+            });
+            
+            $('#accordion-' + this_div_id + '-collapse-transcribe_badge').replaceWith('<span class="badge" id="accordion-' + this_div_id + '-collapse-transcribe_badge">' + translate_master_count + '</span>');
+
+            // COMPREHEND -- INNARDS
+            $('#accordion-' + this_div_id + '-body-comprehend').append('<div style="margin-top: 8px" id="comprehend_sentiment_' + this_div_id + '" ></div>'); // sentiment
+            $('#accordion-' + this_div_id + '-body-comprehend').append('<ul class="nav nav-tabs" id="comprehend_tabs_' + this_div_id + '" ></ul>'); // tabs
+            $('#accordion-' + this_div_id + '-body-comprehend').append('<div id="comprehend_types_' + this_div_id + '" class="tab-content"></div>'); // content
+
+            if (typeof minute.transcribe_transcript.transcripts[0].comprehend != "undefined") {
+                comprehend_master_count = 0;
+                // console.log(minute.transcribe_transcript.transcripts[0].comprehend);
+                // Sentiment Bar
+                if (typeof minute.transcribe_transcript.transcripts[0].comprehend.sentiment_score != "undefined") {
+                    $('#comprehend_sentiment_' + this_div_id).append('<h5>Overall Sentiment</h5><div id="comprehend_sentiment_score_' + this_div_id + '" class="progress"></div>');
+                    // $('#comprehend_tabs_' + this_div_id).append('<li class="active"><a id="comprehend_tabs_sentiment_score_' + this_div_id +'" data-toggle="tab" href="#comprehend_types_sentiment_score_' + this_div_id + '" style="text-transform: capitalize;">sentiment score</a></li>'); //tab
+                    // $('#comprehend_types_' + this_div_id).append('<div id="comprehend_types_sentiment_score_' + this_div_id + '" class="tab-pane fade in active"><div id="comprehend_sentiment_score_' + this_div_id + '" class="progress"></div></div>');
+                    $.each(minute.transcribe_transcript.transcripts[0].comprehend.sentiment_score, function(  key, value ) {
+                        this_value = parseFloat(value) * 100; 
+                        this_label = 'danger';
+                        switch(key){
+                            case 'Mixed':
+                                this_label = 'warning';
+                                break;
+                            case 'Positive':
+                                this_label = 'success';
+                                break;
+                            case 'Negative':
+                                this_label = 'danger';
+                                break;
+                            case 'Neutral': 
+                                this_label = 'info';
+                                break;
+                        }
+                        $('#comprehend_sentiment_score_' + this_div_id).append('<div class="progress-bar progress-bar-striped progress-bar-'+ this_label +'" role="progressbar" aria-valuenow="'+ this_value +'" aria-valuemin="0" aria-valuemax="100" style="width: '+ this_value +'%;">'+ key +'</div>');
+                    });
+                }
+                // key_phrases
+                if (typeof minute.transcribe_transcript.transcripts[0].comprehend.key_phrases != "undefined") {
+                    comprehend_master_count++;
+                    char_count_list = [];
+                    $.each(minute.transcribe_transcript.transcripts[0].comprehend.key_phrases, function(  key, value ) {
+                        if ($('#comprehend_tabs_key_phrases_' + this_div_id).length){
+                        }else{
+                            $('#comprehend_tabs_' + this_div_id).append('<li class="active"><a id="comprehend_tabs_key_phrases_' + this_div_id +'" data-toggle="tab" href="#comprehend_types_key_phrases_' + this_div_id + '" style="text-transform: capitalize;">key phrases</a></li>'); //tab
+                            $('#comprehend_types_' + this_div_id).append('<div id="comprehend_types_key_phrases_' + this_div_id + '" class="tab-pane fade in active"><span id="comprehend_types_key_phrases_' + this_div_id + '_transcript" >' + comprehend_transcript + '</span></div>'); // content
+                        }
+                        char_count_list.push(value.BeginOffset);
+                        char_count_list.push(value.EndOffset);
+                    });
+                    // console.log(char_count_list)
+                    // $('#comprehend_types_' + value.Type + '_' + this_div_id).append('<span class="label label-primary" style="margin-left: 3px; opacity: ' + value.Score + '" > ' + value.Text + ' </span>'); // old
+                    this_comprehend_transcript = $('#comprehend_types_key_phrases_' + this_div_id + '_transcript').html();
+                    new_comprehend_transcript = "";
+                    array_count = 0;
+                    for(i = 0, len = this_comprehend_transcript.length; i < len; i++) {
+                        if(char_count_list[array_count] == i){
+                            if(array_count & 1) { // ODD
+                                new_comprehend_transcript += '</span>';
+                            } else { // EVEN
+                                new_comprehend_transcript += '<span class="label label-primary key_phrases" style="margin-left: 3px;" >';
+                            }
+                            array_count++;
+                        }
+                        new_comprehend_transcript += this_comprehend_transcript.substr(i, 1);
+                    }
+                    $('#comprehend_types_key_phrases_' + this_div_id + '_transcript').html(new_comprehend_transcript);
+                    
+                }                
+                // Entities
+                if (typeof minute.transcribe_transcript.transcripts[0].comprehend.detect_entities != "undefined") {
+                    detect_entities_list = [];
+                    $.each(minute.transcribe_transcript.transcripts[0].comprehend.detect_entities, function(  key, value ) {
+                        if ($('#comprehend_tabs_' + value.Type + '_' + this_div_id).length){
+                        }else{
+                            this_type = value.Type.toLowerCase().replace("_", " ");
+                            $('#comprehend_tabs_' + this_div_id).append('<li><a id="comprehend_tabs_' + value.Type + '_' + this_div_id +'" data-toggle="tab" href="#comprehend_types_' + value.Type + '_' + this_div_id + '" style="text-transform: capitalize;">' + this_type + ' <span class="badge" id="comprehend_tabs_' + value.Type + '_' + this_div_id +'_badge">0</span></a></li>'); //tab
+                            $('#comprehend_types_' + this_div_id).append('<div id="comprehend_types_' + value.Type + '_' + this_div_id + '" class="tab-pane fade"><span id="comprehend_types_' + value.Type + '_' + this_div_id + '_transcript" >' + comprehend_transcript + '</span></div>'); // content
+                            // console.log('resetting transcript ' + value.Type);
+                            detect_entities_list[value.Type] = [];
+                        }
+                        detect_entities_list[value.Type].push(value);
+
+                    });
+                    for(var key in detect_entities_list){
+                        // console.log(key);
+                        $('#comprehend_tabs_' + key + '_' + this_div_id +'_badge').replaceWith('<span class="badge ' + key + '" id="comprehend_tabs_' + key + '_' + this_div_id +'_badge">' + detect_entities_list[key].length + '</span>');
+                        comprehend_master_count++;
+                        char_count_list = [];
+                        for(var i=0; i < detect_entities_list[key].length; i++) {
+                            // console.log(detect_entities_list[key][i]);
+                            char_count_list.push(detect_entities_list[key][i].BeginOffset);
+                            char_count_list.push(detect_entities_list[key][i].EndOffset);
+                        }
+                        // console.log(char_count_list);
+                        this_comprehend_transcript = $('#comprehend_types_' + key + '_' + this_div_id + '_transcript').html();
+                        new_comprehend_transcript = "";
+                        array_count = 0;
+                        for(i = 0, len = this_comprehend_transcript.length; i < len; i++) {
+                            if(char_count_list[array_count] == i){
+                                if(array_count & 1) { // ODD
+                                    new_comprehend_transcript += '</span>';
+                                } else { // EVEN
+                                    new_comprehend_transcript += '<span class="label label-primary ' + key + '" style="margin-left: 3px;" >';
+                                }
+                                array_count++;
+                            }
+                            new_comprehend_transcript += this_comprehend_transcript.substr(i, 1);
+                        }
+                        $('#comprehend_types_' + key + '_' + this_div_id + '_transcript').html(new_comprehend_transcript);
+                        
+                    }
+
+
+                }
+                $('#accordion-' + this_div_id + '-collapse-comprehend_badge').replaceWith('<span class="badge" id="accordion-' + this_div_id + '-collapse-comprehend_badge">' + comprehend_master_count + '</span>');
+
+                $('#minute-' + this_div_id ).show(1200);
+            }
+
+            // REKOGNITION -- INNARDS
+            rekognition_master_count = 0;
+            $('#accordion-' + this_div_id + '-body-rekognition').append('<ul class="nav nav-tabs" id="rekognition_tabs_' + this_div_id + '" ></ul>'); // tabs
+            $('#accordion-' + this_div_id + '-body-rekognition').append('<div id="rekognition_types_' + this_div_id + '" class="tab-content"></div>'); // content            
+            // labels
+            if (typeof minute.rekog_labels[0] != "undefined") {
+                rekognition_master_count++;
+                // console.log(minute.rekog_labels);
+                this_type = 'rekog_labels';
+                $('#rekognition_tabs_' + this_div_id).append('<li class="active"><a id="rekognition_tabs_' + this_type + '_' + this_div_id +'" data-toggle="tab" href="#rekognition_types_' + this_type + '_' + this_div_id + '" style="text-transform: capitalize;">' + this_type.replace("rekog_", "" ) + ' <span class="badge" id="rekognition_tabs_' + this_type + '_' + this_div_id +'_badge">0</span></a></li>'); //tab
+                $('#rekognition_types_' + this_div_id).append('<div id="rekognition_types_' + this_type + '_' + this_div_id + '" class="tab-pane fade in active "><span id="rekognition_types_' + this_type + '_' + this_div_id + '_transcript" ></span></div>'); // content
+                
+                rekog_list = [];
+                $.each(minute.rekog_labels, function(  key, value ) {
+                    // $('#rekog_list_' + this_div_id).append('<span class="label label-default" onClick="setInOut(\'' + value.timestamp +  '\',\'' + value.timestamp + '\')" style="opacity: ' + value.Confidence / 100 + '">' + value.Name + '</span> ');
+                    if(typeof rekog_list[value.Name] == "undefined" ){
+                        rekog_list[value.Name] = 0;
+                    }
+                    rekog_list[value.Name] += 1;
+                });
+                // console.log(rekog_list);
+                rekog_count = 0;
+                for(var key in rekog_list){
+                    // console.log(rekog_list[key]);
+                    $('#rekognition_types_' + this_type + '_' + this_div_id + '_transcript').append('<span style="margin-left: 8px;"><span class="label label-default" style="opacity: 0.85">' + key + '</span> <span class="badge">' + rekog_list[key] + '</span></span> ');
+                    rekog_count++;
+                }
+                $('#rekognition_tabs_' + this_type + '_' + this_div_id +'_badge').replaceWith('<span class="badge ' + this_type + '" id="rekognition_tabs_' + this_type + '_' + this_div_id +'_badge">' + rekog_count + '</span>');
+
+            }
+            // words
+            if (typeof minute.rekog_words[0] != "undefined") {
+                rekognition_master_count++;
+                // console.log(minute.rekog_words);
+                this_type = 'rekog_words';
+                $('#rekognition_tabs_' + this_div_id).append('<li><a id="rekognition_tabs_' + this_type + '_' + this_div_id +'" data-toggle="tab" href="#rekognition_types_' + this_type + '_' + this_div_id + '" style="text-transform: capitalize;">' + this_type.replace("rekog_words", "Text" ) + ' <span class="badge" id="rekognition_tabs_' + this_type + '_' + this_div_id +'_badge">0</span></a></li>'); //tab
+                $('#rekognition_types_' + this_div_id).append('<div id="rekognition_types_' + this_type + '_' + this_div_id + '" class="tab-pane fade "><span id="rekognition_types_' + this_type + '_' + this_div_id + '_transcript" ></span></div>'); // content
+                
+                rekog_list = [];
+                $.each(minute.rekog_words, function(  key, value ) {
+                    if(typeof rekog_list[value.Name] == "undefined" ){
+                        rekog_list[value.Name] = 0;
+                    }
+                    rekog_list[value.Name] += 1;
+                });
+                // console.log(rekog_list);
+                rekog_count = 0;
+                for(var key in rekog_list){
+                    // console.log(rekog_list[key]);
+                    $('#rekognition_types_' + this_type + '_' + this_div_id + '_transcript').append('<span style="margin-left: 8px;"><span class="label label-default" style="opacity: 0.85">' + key + '</span> <span class="badge">' + rekog_list[key] + '</span></span><br /> ');
+                    rekog_count++;
+                }
+                $('#rekognition_tabs_' + this_type + '_' + this_div_id +'_badge').replaceWith('<span class="badge ' + this_type + '" id="rekognition_tabs_' + this_type + '_' + this_div_id +'_badge">' + rekog_count + '</span>');
+
+            }     
+            // facial
+            if (typeof minute.rekog_facial != "undefined") {
+                rekognition_master_count++;
+                // console.log(minute.rekog_facial);
+                this_type = 'rekog_facial';
+                $('#rekognition_tabs_' + this_div_id).append('<li><a id="rekognition_tabs_' + this_type + '_' + this_div_id +'" data-toggle="tab" href="#rekognition_types_' + this_type + '_' + this_div_id + '" style="text-transform: capitalize;">' + this_type.replace("rekog_facial", "Facial" ) + ' <span class="badge" id="rekognition_tabs_' + this_type + '_' + this_div_id +'_badge">0</span></a></li>'); //tab
+                $('#rekognition_types_' + this_div_id).append('<div id="rekognition_types_' + this_type + '_' + this_div_id + '" class="tab-pane fade "><span id="rekognition_types_' + this_type + '_' + this_div_id + '_transcript" ></span></div>'); // content
+                
+                rekog_list = [];
+                $.each(minute.rekog_facial, function(  key, value ) {
+                    if(typeof rekog_list[value] == "undefined" ){
+                        rekog_list[value] = 0;
+                    }
+                    rekog_list[value] += 1;
+                });
+                // console.log(rekog_list);
+                rekog_count = 0;
+                for(var key in rekog_list){
+                    // console.log(rekog_list[key]);
+                    $('#rekognition_types_' + this_type + '_' + this_div_id + '_transcript').append('<span style="margin-left: 8px;"><span class="label label-default" style="opacity: 0.85">' + key + '</span> <span class="badge">' + rekog_list[key] + '</span></span><br /> ');
+                    rekog_count++;
+                }
+                $('#rekognition_tabs_' + this_type + '_' + this_div_id +'_badge').replaceWith('<span class="badge ' + this_type + '" id="rekognition_tabs_' + this_type + '_' + this_div_id +'_badge">' + rekog_count + '</span>');
+
+            }                    
+            // celeb
+            if (typeof minute.rekog_celebs[0] != "undefined") {
+                rekognition_master_count++;
+                // console.log(minute.rekog_celebs);
+                this_type = 'rekog_celebs';
+                $('#rekognition_tabs_' + this_div_id).append('<li><a id="rekognition_tabs_' + this_type + '_' + this_div_id +'" data-toggle="tab" href="#rekognition_types_' + this_type + '_' + this_div_id + '" style="text-transform: capitalize;">' + this_type.replace("rekog_celebs", "Celebrity" ) + ' <span class="badge" id="rekognition_tabs_' + this_type + '_' + this_div_id +'_badge">0</span></a></li>'); //tab
+                $('#rekognition_types_' + this_div_id).append('<div id="rekognition_types_' + this_type + '_' + this_div_id + '" class="tab-pane fade "><span id="rekognition_types_' + this_type + '_' + this_div_id + '_transcript" ></span></div>'); // content
+                
+                rekog_list = [];
+                $.each(minute.rekog_words, function(  key, value ) {
+                    if(typeof rekog_list[value.Name] == "undefined" ){
+                        rekog_list[value.Name] = 0;
+                    }
+                    rekog_list[value.Name] += 1;
+                });
+                // console.log(rekog_list);
+                rekog_count = 0;
+                for(var key in rekog_list){
+                    // console.log(rekog_list[key]);
+                    $('#rekognition_types_' + this_type + '_' + this_div_id + '_transcript').append('<span style="margin-left: 8px;"><span class="label label-default" style="opacity: 0.85">' + key + '</span> <span class="badge">' + rekog_list[key] + '</span></span><br /> ');
+                    rekog_count++;
+                }
+                $('#rekognition_tabs_' + this_type + '_' + this_div_id +'_badge').replaceWith('<span class="badge ' + this_type + '" id="rekognition_tabs_' + this_type + '_' + this_div_id +'_badge">' + rekog_count + '</span>');
+
+            }            
+            $('#accordion-' + this_div_id + '-collapse-rekognition_badge').replaceWith('<span class="badge" id="accordion-' + this_div_id + '-collapse-rekognition_badge">' + rekognition_master_count + '</span>');
+            
+            // SCENES -- INNARDS 
+            $('#player_' + this_div_id).append('<div class="row"><div class="col-xs-12" id="carouseldiv_' + this_div_id + '" ></div></div><div class="row"><div class="col-xs-12" id="playerdiv_' + this_div_id + '"></div></div><div class="row"><div class="col-xs-12" id="playertextdiv_' + this_div_id + '" onClick="make_player(\'' + this_div_id + '\',\'' + emp_start +  '\',\'' + emp_end +  '\')"><b>from <i>' + emp_start +  '</i> to <i>' + emp_end + '</i></b></div></div>');
+            $('#carouseldiv_' + this_div_id).append('<div id="carousel_' + this_div_id + '" class="carousel slide" ><ol id="carousel_indicators_' + this_div_id + '" class="carousel-indicators"></ol><div  onClick="make_player(\'' + this_div_id + '\',\'' + emp_start +  '\',\'' + emp_end +  '\')" id="carousel_listbox_' + this_div_id + '" class="carousel-inner" role="listbox"></div></div>');
+            $('#carouseldiv_' + this_div_id).append('<a class="left carousel-control" href="#carousel_' + this_div_id + '" role="button" data-slide="prev"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span><span class="sr-only">Previous</span></a>');
+            $('#carouseldiv_' + this_div_id).append('<a class="right carousel-control" href="#carousel_' + this_div_id + '" role="button" data-slide="next"><span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span><span class="sr-only">Next</span></a>');
+            // scenes
+            this_counter = 0;
+            $.each(minute.scenes, function(  key, value ) {
+                this_scene_id = value.timestamp.replace(/( )|(\:)/g, "-");
+                // console.log(this_scene_id);
+                if(this_counter > 0){
+                    $('#carousel_listbox_' + this_div_id).append('<div class="item "><img src="'+ s3_url + '/images/' + value.scene + '" alt="..."><div class="carousel-caption"><div id="scene_rekog_' + this_scene_id + '"><span class="playicon" ></span></div><p>' + value.timestamp + '</p></div></div>');
+                    $('#carousel_indicators_' + this_div_id).append('<li data-target="#carousel_' + this_div_id + '" data-slide-to="' + this_counter +'"></li>');
+                }else{
+                    $('#carousel_indicators_' + this_div_id).append('<li data-target="#carousel_' + this_div_id + 'c" data-slide-to="0" class="active"></li>');                                
+                    $('#carousel_listbox_' + this_div_id).append('<div class="item active"><img src="' + s3_url + '/images/' + value.scene + '" alt="..."><div class="carousel-caption"><div id="scene_rekog_' + this_scene_id + '"><span class="playicon" ></span></div><p>' + value.timestamp + '</p></div></div>');
+                }
+                this_counter++;
+                $('#scenechange_' + this_div_id).append('<div class="col-xs-3"><a onClick="setInOut(\'' + value.timestamp +  '\',\'' + value.timestamp + '\')" class="thumbnail"><img style="opacity: ' + value.strength / 100 + '" id="poster_' + this_div_id + '" src="' + s3_url + '/images/' + value.scene + '" alt="..."></a></div>');
+                // $('#player_' + this_div_id).append('<div class="col-xs-3"><a onClick="setInOut(\'' + value.timestamp +  '\',\'' + value.timestamp + '\')" class="thumbnail"><img style="opacity: ' + value.strength / 100 + '" id="poster_' + this_div_id + '" src="' + '/images/' + value.scene + '" alt="..."></a></div>');
+            });
+            // when no jpeg from no scene changes
+            if(this_counter == 0){
+                $('#carousel_indicators_' + this_div_id).append('<li data-target="#carousel_' + this_div_id + 'c" data-slide-to="0" class="active"></li>');                                
+                $('#carousel_listbox_' + this_div_id).append('<div class="item active"><img src="' + s3_url + '/slate.jpg" alt="..."><div class="carousel-caption"><div id="scene_rekog_slate"><span class="playicon" ></span></div></div></div>');
+            }
+            this_interval = Math.round(100000 / this_counter, 0);
+            if(this_interval < 1000){
+                this_interval = 1000;
+            }
+            if(this_interval > 10000){
+                this_interval = 10000;
+            }
+            // console.log(this_counter, this_interval);
+            $('#carousel_' + this_div_id + '').carousel({interval: this_interval});
+
+            $.each(minute.rekog_labels, function(  key, value ) {
+                this_scene_id = value.timestamp.replace(/( )|(\:)/g, "-");
+                // console.log(this_scene_id);                            
+                $('#scene_rekog_' + this_scene_id).append('<span class="label label-default" style="opacity: ' + value.Confidence / 100 + '">' + value.Name + '</span> ');
+            });
+
+        }else{
+            // console.log('already exists skipping: ' + this_div_id);
+        }
+        
+    }
+    function update_list() {
+        count = 0;
+        $.getJSON(s3_url + "/list-minute.json?random=" + Math.random(), function(json) {
+            json_reversed = json.slice(0).reverse();
+            $.each(json_reversed, function( ) {
+                if(this.transcribe_status == 'COMPLETED'){
+                    if(this.transcribe_transcript != 'IN_PROGRESS'){
+                        if(count < 10){
+                        count++;
+                        add_minute(this);
+                    }
+
+
+                }
+            }
+            });
+        })  
+        .done(function(data) {
+            $("#please_wait").remove();
+            // add_live();
+            run_first_time = 'true';
+    });
+    $('div.fields:gt(20)').each(function (index, elt){}).remove(); 
+    $.getJSON(s3_url + "/list-mediaservices.json?random=" + Math.random(), function(json) {
+            // console.log(json.medialive_metrics);
+            // $('#accordion-' + this_div_id + '-body-medialive').append('<pre style="font-size: 50%">' + JSON.stringify(json.medialive_metrics,null, 2) + '</pre>');
+            $('#accordion-' + this_div_id + '-medialive-NetworkIn0').html('<span>' + parseFloat(json.medialive_metrics.NetworkIn["0"].replace(" Count", "")).toFixed(2) + ' Bytes</span>');
+            $('#accordion-' + this_div_id + '-medialive-NetworkIn1').html('<span>' + parseFloat(json.medialive_metrics.NetworkIn["1"].replace(" Count", "")).toFixed(2) + ' Bytes</span>');
+            $('#accordion-' + this_div_id + '-medialive-NetworkOut0').html('<span>' + parseFloat(json.medialive_metrics.NetworkOut["0"].replace(" Count", "")).toFixed(2) + ' Bytes</span>');
+            $('#accordion-' + this_div_id + '-medialive-NetworkOut1').html('<span>' + parseFloat(json.medialive_metrics.NetworkOut["1"].replace(" Count", "")).toFixed(2) + ' Bytes</span>');
+            $('#accordion-' + this_div_id + '-medialive-InputVideoFrameRate0').html('<span>' + parseFloat(json.medialive_metrics.InputVideoFrameRate["0"].replace(" Count/Second", "")).toFixed(2) + '</span>');
+            $('#accordion-' + this_div_id + '-medialive-InputVideoFrameRate1').html('<span>' + parseFloat(json.medialive_metrics.InputVideoFrameRate["1"].replace(" Count/Second", "")).toFixed(2) + '</span>');
+            
+            // console.log(json.mediapackage_metrics);
+            // $('#accordion-' + this_div_id + '-body-medipackage').append('<pre style="font-size: 60%">' + JSON.stringify(json.mediapackage_metrics,null, 2) + '</pre>');
+            $('#accordion-' + this_div_id + '-medipackage-IngressBytes').html('<span>' + parseFloat(json.mediapackage_metrics.IngressBytes.replace(" Bytes", "")).toFixed(0) + ' Bytes<span>');
+            $('#accordion-' + this_div_id + '-medipackage-IngressResponseTime').html('<span>' + parseFloat(json.mediapackage_metrics.IngressResponseTime.replace(" Milliseconds", "")).toFixed(0) + ' ms<span>');
+            $('#accordion-' + this_div_id + '-medipackage-EgressBytes').html('<span>' + parseFloat(json.mediapackage_metrics.EgressBytes.replace(" Bytes", "")).toFixed(0) + ' Bytes<span>');
+            $('#accordion-' + this_div_id + '-medipackage-EgressRequestCount').html('<span>' + parseFloat(json.mediapackage_metrics.EgressRequestCount.replace(" Count", "")).toFixed(0) + ' Requests <small>(5min)</small> <span>');
+            $('#accordion-' + this_div_id + '-medipackage-EgressResponseTime').html('<span>' + parseFloat(json.mediapackage_metrics.EgressResponseTime.replace(" Milliseconds", "")).toFixed(0) + ' ms<span>');
+
+            // $('#accordion-' + this_div_id + '-medipackage-IngressResponseTime').html(json.mediapackage_metrics.IngressResponseTime);
+            // $('#accordion-' + this_div_id + '-medipackage-EgressBytes').html(json.mediapackage_metrics.EgressBytes);
+            // $('#accordion-' + this_div_id + '-medipackage-EgressRequestCount').html(json.mediapackage_metrics.EgressRequestCount + ' (5 min)');
+            // $('#accordion-' + this_div_id + '-medipackage-EgressResponseTime').html(json.mediapackage_metrics.EgressResponseTime);
+            
+        });
+    }
+    var start_or_end = 'start';
+    function setInOut(start_time,end_time){
+        this_blah = start_or_end;
+        if( this_blah === 'start'){
+            $('#start_time').val(start_time);
+            start_or_end = 'end';
+        }
+        if( this_blah === 'end'){
+            $('#end_time').val(end_time);
+            start_or_end = 'start';
+        }
+
+    }  
+</script>
+<style>
+body{
+        background-color: #555;
+}
+        /* The heart of the matter */
+#the_row {
+    overflow-x: auto;
+    white-space: nowrap;
+}
+#minutes > .col-xs-4 {
+    display: inline-block;
+    white-space: normal;
+    float: none;
+}
+::-webkit-scrollbar {
+        -webkit-appearance: none;
+        width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+        border-radius: 5px;
+        background-color: rgba(0,0,0,.5);
+        -webkit-box-shadow: 0 0 1px rgba(255,255,255,.5);
+        box-shadow: 0 0 1px rgba(255,255,255,.5);
+    }
+.timeline {
+    position: absolute;
+    z-index: 1;
+    top: -5.5px;    
+    left: 0;
+    right: -15px;
+    height: 5px;
+    border-top: 5px solid #6f6f6f;
+}
+.timedot {
+    left: 0;
+    right: 0;
+    background: transparent center 0 no-repeat url(timedot.png);
+    position: absolute !important;
+    z-index: 2;
+    height: 13px;
+    text-align: center;
+    top: -9px !important;    
+}
+.sniptitle {
+    -webkit-transition: left 1s ease;
+    -moz-transition: left 1s ease;
+    -o-transition: left 1s ease;
+    transition: left 1s ease;
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    z-index: 2;
+    line-height: 1;
+    color: #c3c3c3;
+    padding: 0 15px 0 10px;
+    font-size: 21px;
+    height: 30px;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    -ms-transform: rotate(-45deg);
+    -webkit-transform: rotate(-45deg);
+    -moz-transform: rotate(-45deg);
+    -o-transform: rotate(-45deg);
+    transform: rotate(-45deg);
+    -ms-transform-origin: 5px 5px;
+    -webkit-transform-origin: 5px 5px;
+    -moz-transform-origin: 5px 5px;
+    -o-transform-origin: 5px 5px;
+    transform-origin: 5px 5px;
+}
+.playicon {
+            content: '';
+            background-image: url(web_icon_play.svg);
+            background-repeat: no-repeat;
+            height: 120px;
+            /* width: 120px; */
+            /* text-align: center; */
+            margin: auto;
+            /* background-position: 0 15px; */
+            /* background-color: #000; */
+            border-radius: 100%;
+            height: 120px;
+            width: 120px;
+            top: -30%;
+            transform: translateY(-50%);
+            position: absolute;
+            left: 0;
+            right: 0;
+            content: '';
+            background-repeat: no-repeat;
+            height: 120px;
+            width: 120px;
+            text-align: center;
+            display: block;
+            margin: auto;
+            background-color: #000;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 100%;
+        }
+        .services-area{
+            height: 340px;
+            overflow: scroll;
+        }
+        .EVENT { background-color: #1f77b4; }
+        .ORGANIZATION { background-color: #ff7f0e; }
+        .DATE { background-color: #ad494a; }
+        .LOCATION { background-color: #d500f9; }
+        .PERSON { background-color: #dff0d8; color: #3c763d;}
+        .COMMERCIAL_ITEM { background-color: #d9edf7; color: #3c763d;}
+        .QUANTITY { background-color: #f2dede; color: #3c763d;}
+        .key_phrases { background-color: #d9edf7; color: #31708f;}
+        .panel-heading{
+            padding: 5px 15px 5px 15px;
+            font-size: 90%;
+        }
+        h5{
+            margin-top: -20px;
+        }
+</style>
+</head>
+<body>
+
+          
+              <div class="container-fluid scrolling-group">
+                                  
+                <div class="row" id="the_row" >
+                    <div id="live" ></div>
+                    <div id="minutes" >
+                            <div class="col-xs-2" id="please_wait" >
+                                    <div class="row" style="margin-top: 60px; margin-bottom: 10px"><div class="col-xs-12"><div class="timeline"></div> <div class="timedot" style="cursor: pointer;"></div><div class="sniptitle" style="cursor: pointer;">loading</div></div></div>
+                                    <div class="row" ><div class="col-xs-12"><div class="panel panel-default"> <div class="panel-body" id="minute-wait_body" > <img style="width: 200px; height: 150px" src="loading.gif" /></div> </div></div> </div>
+                            </div>
+                    </div>
+                </div>
+
+          
+                <hr>
+          
+                <footer>
+                  <p>&pi;</p>
+                </footer>
+              </div> <!-- /container -->
+</body>
+</html>

@@ -17,6 +17,7 @@ from aws_xray_sdk.core import xray_recorder
 from aws_xray_sdk.core import patch_all
 import sys
 import datetime
+import math
 
 # patch_all()
 XRAY = 'true'
@@ -25,13 +26,15 @@ XRAY = 'true'
 S3_BUCKET = "not-set"
 
 ## hardcoded for console use
-DYNAMO_MAIN = "catfinder5002-main"
+# DYNAMO_MAIN = "catfinder5002-main"
 DYNAMO_MAIN_GSI = "id_type-id_filename-index"
 
 
 FFPROBE = './ffprobe'
 FFMPEG = './ffmpeg'
 SOX = './sox'
+MASTER_TTL = 3600
+
 
 s3 = boto3.resource('s3')
 dynamodb = boto3.resource('dynamodb')
@@ -100,6 +103,7 @@ def get_s3file(BUCKET_NAME, KEY, LOCALFILE):
 def update_dyanmo_main ( dynamo_object ):
     ## DynamoDB Update
     print("put_dynamo to table: " + str(DYNAMO_MAIN))
+    print("dynamo_object: {}".format(dynamo_object))
     table = dynamodb.Table(DYNAMO_MAIN)
     response = table.update_item(
         Key={
@@ -119,6 +123,7 @@ def update_dyanmo_main ( dynamo_object ):
 
 def put_dynamo_main(dynamo_object):
     print("put_dynamo to table: " + str(DYNAMO_MAIN))
+    print("dynamo_object: {}".format(dynamo_object))    
     table = dynamodb.Table(DYNAMO_MAIN)
     try:
         response = table.put_item(
@@ -145,53 +150,7 @@ def stripper (data):
         return [stripper(v) for v in data if not strip(v)]
     return data
 
-def write_json():
-
-    ## set tmp directory
-    tmpdir = '/tmp/' + str(uuid.uuid4()) + '/'
-    ensure_dir(tmpdir)
-
-    rekog_type = 'minute'
-    print("query of table: " + str(DYNAMO_MAIN))
-    table = dynamodb.Table(DYNAMO_MAIN)    
-    response = table.query(
-        Limit=45,
-        IndexName=DYNAMO_MAIN_GSI,        
-        ScanIndexForward=False,
-        KeyConditionExpression=Key('id_type').eq(rekog_type),
-    )
-    json_string = json.dumps(response['Items'], cls=DecimalEncoder)
-    dynamo_filename = 'list-' + rekog_type + '.json'
-    with open(tmpdir + dynamo_filename, 'w') as outfile:
-        outfile.write(json_string)
-    data = open(tmpdir + dynamo_filename, 'rb')
-    pprint(s3.Bucket(S3_BUCKET).put_object(Key=dynamo_filename, Body=data))
-    delete_file(tmpdir + dynamo_filename)
-
-    rekog_type = 'scenechange'
-    print("query of table: " + str(DYNAMO_MAIN))
-    table = dynamodb.Table(DYNAMO_MAIN)    
-    response = table.query(
-        # Limit=1000,
-        IndexName=DYNAMO_MAIN_GSI,        
-        ScanIndexForward=False,
-        KeyConditionExpression=Key('id_type').eq(rekog_type),
-    )
-    json_string = json.dumps(response['Items'], cls=DecimalEncoder)
-    dynamo_filename = 'list-' + rekog_type + '.json'
-    with open(tmpdir + dynamo_filename, 'w') as outfile:
-        outfile.write(json_string)
-    data = open(tmpdir + dynamo_filename, 'rb')
-    pprint(s3.Bucket(S3_BUCKET).put_object(Key=dynamo_filename, Body=data))
-    delete_file(tmpdir + dynamo_filename)
-
-def lambda_handler(event, context):
-    if XRAY == 'true':
-        patch_all()    
-    get_environment_variables()  
-    print('S3_BUCKET: {}'.format(S3_BUCKET))
-    master_ttl = 3600
-
+def transcribe_results():
     ##### Transcribe Status updates
     print("query of table: " + str(DYNAMO_MAIN))
     table = dynamodb.Table(DYNAMO_MAIN)    
@@ -201,6 +160,7 @@ def lambda_handler(event, context):
         ScanIndexForward=False,
         KeyConditionExpression=Key('id_type').eq('minute'),
     )
+    framerate = '30.0'
     for item in response['Items']:
         # print('dynamo transcribe_status status: {} \t transcribe_transcript: {}'.format(item['transcribe_status'], item['transcribe_transcript']))
         if item['transcribe_status'] == 'IN_PROGRESS':
@@ -213,6 +173,8 @@ def lambda_handler(event, context):
         if item['transcribe_status'] == 'COMPLETED':
             if item['transcribe_transcript'] == 'IN_PROGRESS':
                 print('{} needs to be updated dynamo \t transcribe_status status: {} \t transcribe_transcript: {}'.format(item['id_filename'], item['transcribe_status'], item['transcribe_transcript']))
+                if 'framerate' in item:
+                    framerate = item['framerate']
                 transcribe_job = transcribe.get_transcription_job(TranscriptionJobName=item['transcribe_job'])
                 # print('transcribe_transcript_uri: {}'.format(transcribe_job['TranscriptionJob']['Transcript']['TranscriptFileUri']))            
                 transcribe_status = transcribe_job['TranscriptionJob']['TranscriptionJobStatus']
@@ -283,7 +245,10 @@ def lambda_handler(event, context):
                                 'start_time' : (datetime.timedelta(seconds=float(titem['start_time'])) + datetime_start).strftime("%Y-%m-%d %H:%M:%S").replace(' ', 'T') + '+00:00',
                                 'end_time' : (datetime.timedelta(seconds=float(titem['end_time'])) + datetime_start).strftime("%Y-%m-%d %H:%M:%S").replace(' ', 'T') + '+00:00'
                             }
-                            
+                            titem['emc'] = { 
+                                'start_time' : (datetime.timedelta(seconds=float(titem['start_time'])) + datetime_start).strftime("%H:%M:%S:").replace(' ', 'T') + str(int(math.floor(float((datetime.timedelta(seconds=float(titem['start_time'])) + datetime_start).strftime("0.%f")) * float(framerate)))).zfill(2),
+                                'end_time' : (datetime.timedelta(seconds=float(titem['end_time'])) + datetime_start).strftime("%H:%M:%S:").replace(' ', 'T') + str(int(math.ceil(float((datetime.timedelta(seconds=float(titem['end_time'])) + datetime_start).strftime("0.%f")) * float(framerate)))).zfill(2)
+                            }
                             last_end_time = titem['end_time']
                             # print('start_time_pdt: {} \t end_time: {}'.format(start_time_pdt,end_time_pdt))
                         if titem['type'] == 'punctuation':
@@ -297,12 +262,18 @@ def lambda_handler(event, context):
                                 'start_time' : (datetime.timedelta(seconds=float(last_end_time)) + datetime_start).strftime("%Y-%m-%d %H:%M:%S").replace(' ', 'T') + '+00:00',
                                 'end_time' : (datetime.timedelta(seconds=float(last_end_time)) + datetime_start).strftime("%Y-%m-%d %H:%M:%S").replace(' ', 'T') + '+00:00'
                             }
+                            titem['emc'] = { 
+                                'start_time' : (datetime.timedelta(seconds=float(last_end_time)) + datetime_start).strftime("%H:%M:%S:").replace(' ', 'T') + str(int(math.floor(float((datetime.timedelta(seconds=float(last_end_time)) + datetime_start).strftime("0.%f")) * float(framerate)))).zfill(2),
+                                'end_time' : (datetime.timedelta(seconds=float(last_end_time)) + datetime_start).strftime("%H:%M:%S:").replace(' ', 'T') + str(int(math.ceil(float((datetime.timedelta(seconds=float(last_end_time)) + datetime_start).strftime("0.%f")) * float(framerate)))).zfill(2)
+                            }
                 # pprint(transcribe_transcript)                            
                 update_dyanmo_main( {'id_filename' : item['id_filename'], 'transcribe_status' : transcribe_status, 'transcribe_transcript' : transcribe_transcript } )
             else:
                 print('{} dynamo already been updated... skipping '.format(item['id_filename']))
 
-    # return 'fake stop point'
+    # return 'fake stop point'    
+
+def transcribe_submit():
     #### Transcribe Job Design
     print("query of table: " + str(DYNAMO_MAIN))
     table = dynamodb.Table(DYNAMO_MAIN)    
@@ -313,32 +284,65 @@ def lambda_handler(event, context):
         KeyConditionExpression=Key('id_type').eq('segment'),
     )
     full_list = {}
+    framerate = '30.0'
     for item in response['Items']:
+        if 'framerate' in item:
+            framerate = item['framerate']
         if item['transcribe_status'] == 'NOT_SUBMITTED':
             if item['timestamp_minute'] not in full_list:
-                full_list[item['timestamp_minute']] = {'duration': float(0)}
-            full_list[item['timestamp_minute']].update({str(item['timestamp_pdt']) : item['audio_file']})
+                full_list[item['timestamp_minute']] = {'duration': float(0), 'scenechanges': [], 'timestamps': {} }
+            full_list[item['timestamp_minute']]['timestamps'].update({str(item['timestamp_pdt']) : item['audio_file']})
             full_list[item['timestamp_minute']]['duration'] += float(item['duration'])
-    pprint(full_list)
+            full_list[item['timestamp_minute']]['scenechanges'] = full_list[item['timestamp_minute']]['scenechanges'] + item['scenechange_list']
+    # pprint(full_list)
     ## set tmp directory
     tmpdir = '/tmp/' + str(uuid.uuid4()) + '/'
     ensure_dir(tmpdir)
     files_to_delete = []
     for minute, seconds in full_list.iteritems():
-        if(seconds['duration'] > 49):
+        if(seconds['duration'] > 55):
+            rekog_list = []
+            rekog_word_list = []
+            rekog_celeb_list = []
+            rekog_facial_list = []
+            scene_list = []
+            for scenechange in seconds['scenechanges']:
+                print("query of table: " + str(DYNAMO_MAIN))
+                table = dynamodb.Table(DYNAMO_MAIN)    
+                response = table.query(
+                    KeyConditionExpression=Key('id_filename').eq(scenechange),
+                )
+                for item in response['Items']:
+                    for rekog_label in item['rekog_labels']:
+                        rekog_label['timestamp'] = item['timestamp_minute'] + ':' + item['timestamp_second'].zfill(2) + ':' + item['timestamp_frame'].zfill(2)
+                        rekog_list.append(rekog_label)
+                    if 'rekog_words' in item:
+                        for rekog_word in item['rekog_words']:
+                            rekog_word['timestamp'] = item['timestamp_minute'] + ':' + item['timestamp_second'].zfill(2) + ':' + item['timestamp_frame'].zfill(2)
+                            rekog_word_list.append(rekog_word)
+                    if 'rekog_celebs' in item:
+                        for rekog_celeb in item['rekog_celebs']:
+                            rekog_celeb['timestamp'] = item['timestamp_minute'] + ':' + item['timestamp_second'].zfill(2) + ':' + item['timestamp_frame'].zfill(2)
+                            rekog_celeb_list.append(rekog_celeb)
+                    if 'rekog_facial' in item:
+                        for rekog_facial in item['rekog_facial']:
+                            # rekog_facial['timestamp'] = item['timestamp_minute'] + ':' + item['timestamp_second'].zfill(2) + ':' + item['timestamp_frame'].zfill(2)
+                            rekog_facial_list.append(rekog_facial)
+                        
+                    scene_list.append({'scene': item['id_filename'], 'strength': item['scenedetect'], 'timestamp': item['timestamp_minute'] + ':' + item['timestamp_second'].zfill(2) + ':' + item['timestamp_frame'].zfill(2)}) 
             files_to_concat = []
             list_of_timestamps = []
-            for second, audiofile in seconds.iteritems():
+            for second, audiofile in seconds['timestamps'].iteritems():
                 if second is not 'duration':
                     print('downloading audio for minute: {}, second: {}, filename: {}, in dir: {}'.format(minute, second, audiofile, tmpdir))
                     get_s3file(S3_BUCKET, 'audio/' + audiofile, tmpdir + audiofile)
                     list_of_timestamps.append(str(second))
                     files_to_concat.append(str(tmpdir + audiofile))
                     files_to_delete.append(str(tmpdir + audiofile))
-                    update_dyanmo_main( {'id_filename' : audiofile.replace('.wav', '-001.jpg'), 'transcribe_status' : 'CONCAT', 'transcribe_transcript' : 'CONCAT' } )
+                    update_dyanmo_main( {'id_filename' : audiofile.replace('.wav', '.ts'), 'transcribe_status' : 'CONCAT', 'transcribe_transcript' : 'CONCAT' } )
             files_to_concat.sort()
             list_of_timestamps.sort()
-            pprint(list_of_timestamps)
+            # pprint(list_of_timestamps)
             print('first timestamp is: {}'.format(list_of_timestamps[0]))
             timestamp_start = list_of_timestamps[0]
             concat_string = SOX + ' '
@@ -346,37 +350,45 @@ def lambda_handler(event, context):
                 concat_string += file_to_concat + ' '
             file_to_upload = 'stream_' + minute.replace('-','').replace(' ','').replace(':','')
             concat_string += tmpdir + file_to_upload +'.wav 2>&1'
-            pprint(concat_string)
+            # pprint(concat_string)
             sox_output = os.popen( concat_string ).read()
-            print('sox output: {}'.format(sox_output))
+            # print('sox output: {}'.format(sox_output))
             data = open(tmpdir + file_to_upload + '.wav', 'rb')
             pprint(s3.Bucket(S3_BUCKET).put_object(Key='audio/' + file_to_upload + '.wav', Body=data))
             files_to_delete.append(str(tmpdir + file_to_upload + '.wav'))
             transcribe_status = 'NOT_SUBMITTED'
             job_name = file_to_upload
             job_uri = "https://s3.amazonaws.com/" + S3_BUCKET + "/audio/" + file_to_upload + ".wav"
-            transcribe.start_transcription_job(
-                TranscriptionJobName=job_name,
-                Media={'MediaFileUri': job_uri},
-                MediaFormat='wav',
-                LanguageCode='en-US',
-                MediaSampleRateHertz=16000
-            )
+            try:
+                transcribe.start_transcription_job(
+                    TranscriptionJobName=job_name,
+                    Media={'MediaFileUri': job_uri},
+                    MediaFormat='wav',
+                    LanguageCode='en-US',
+                    MediaSampleRateHertz=16000
+                )
+            except botocore.exceptions.ClientError as e:
+                pprint(e)
             transcribe_job = transcribe.get_transcription_job(TranscriptionJobName=job_name)
-            print('transcribe status: {}'.format(transcribe_job['TranscriptionJob']['TranscriptionJobStatus']))            
+            print('transcribe status: {}'.format(transcribe_job['TranscriptionJob']['TranscriptionJobStatus']))
             transcribe_status = transcribe_job['TranscriptionJob']['TranscriptionJobStatus']
             dynamo_segment_object={
                 'id_filename': file_to_upload + '.wav',
                 'id_type': 'minute',
                 'timestamp_minute': minute,
-                # 'timestamp_second': datetime_datetime.strftime("%S"),
+                'framerate' : framerate,
                 'timestamp_start' : timestamp_start,
                 'duration' : str(seconds['duration']),
                 'audio_file': file_to_upload, 
                 'transcribe_job' : job_name,
                 'transcribe_status' : transcribe_status,
+                'rekog_labels' : rekog_list,
+                'rekog_words' : rekog_word_list,
+                'rekog_celebs' : rekog_celeb_list,
+                'rekog_facial' : rekog_facial_list,
+                'scenes' : scene_list,
                 'timestamp_created' : int((datetime.datetime.utcnow() - datetime.datetime(1970,1,1)).total_seconds()),
-                'timestamp_ttl' : int((datetime.datetime.utcnow() - datetime.datetime(1970,1,1)).total_seconds() + master_ttl) # 2 hours
+                'timestamp_ttl' : int((datetime.datetime.utcnow() - datetime.datetime(1970,1,1)).total_seconds() + MASTER_TTL) # 2 hours
             }
             put_dynamo_main(dynamo_segment_object)
                         
@@ -388,7 +400,37 @@ def lambda_handler(event, context):
     for file_to_delete in files_to_delete:
         delete_file(file_to_delete)
 
+def write_json():
+
+    ## set tmp directory
+    tmpdir = '/tmp/' + str(uuid.uuid4()) + '/'
+    ensure_dir(tmpdir)
+
+    rekog_type = 'minute'
+    print("query of table: " + str(DYNAMO_MAIN))
+    table = dynamodb.Table(DYNAMO_MAIN)    
+    response = table.query(
+        Limit=45,
+        IndexName=DYNAMO_MAIN_GSI,        
+        ScanIndexForward=False,
+        KeyConditionExpression=Key('id_type').eq(rekog_type),
+    )
+    json_string = json.dumps(response['Items'], cls=DecimalEncoder)
+    dynamo_filename = 'list-' + rekog_type + '.json'
+    with open(tmpdir + dynamo_filename, 'w') as outfile:
+        outfile.write(json_string)
+    data = open(tmpdir + dynamo_filename, 'rb')
+    pprint(s3.Bucket(S3_BUCKET).put_object(Key=dynamo_filename, Body=data))
+    delete_file(tmpdir + dynamo_filename)
+
+def lambda_handler(event, context):
+    if XRAY == 'true':
+        patch_all()    
+    get_environment_variables()  
+    transcribe_results()
+    transcribe_submit()
     write_json()
+
     return 'SUCCESS: it ran'
 
 if __name__ == '__main__':
@@ -400,8 +442,8 @@ if __name__ == '__main__':
     FFPROBE = 'ffprobe' # use local mac version 
     FFMPEG = 'ffmpeg' # use local mac version 
     SOX = 'sox' # use local mac version 
-    os.environ['DYNAMO_MAIN'] = "catfinder5002-main"
-    os.environ['S3_BUCKET'] = 'catfinder5002-dev'
+    os.environ['DYNAMO_MAIN'] = 'nab2018-catfinder5003-main'    
+    os.environ['S3_BUCKET'] = 'nab2018-catfinder5003'
     
     print(lambda_handler(None, None))
     with open('deploy', 'w') as outfile:

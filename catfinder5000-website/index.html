@@ -51,7 +51,8 @@
 
     <script type="text/javascript">
         var s3_url = '/'
-
+        var s3_url_images = '/images/'
+        
         console.log("ready!");
         // lets see if url params are set
         var all_the_stuff = {};
@@ -77,7 +78,7 @@
                         this_thumbnail = 'static.jpg'
                     }
                     // $("#rekog_list").append('<div class="col"><a href="index.html?label=' + this.rekog_label + '">' + this.rekog_label + '</a></div>');
-                    $("#rekog_list-label").append('<div class="col"><a href="index.html?label=' + this.rekog_label + '"><div class="delta-frame" style="width: 175px" ><div class="thumbnail"><div class="img-wrapper"><img src="' + s3_url + this_thumbnail + '"  ></div><div class="caption text-center">' + this.rekog_label + '</div></div></div></a></div>');
+                    $("#rekog_list-label").append('<div class="col"><div class="delta-frame" style="width: 175px" ><div class="thumbnail"><div class="img-wrapper"><img src="' + s3_url_images + this_thumbnail + '"  ></div><div class="caption text-center">' + this.rekog_label + '</div></div></div></div>');
 
 
                 });;
@@ -96,39 +97,61 @@
                         this_thumbnail = 'static.jpg'
                     }
                     // $("#rekog_list").append('<div class="col"><a href="index.html?label=' + this.rekog_label + '">' + this.rekog_label + '</a></div>');
-                    $("#rekog_list-celeb").append('<div class="col"><a href="index.html?label=' + this.rekog_label + '"><div class="delta-frame" style="width: 175px" ><div class="thumbnail"><div class="img-wrapper"><img src="' + s3_url + this_thumbnail + '"  ></div><div class="caption text-center">' + this.rekog_label + '</div></div></div></a></div>');
+                    $("#rekog_list-celeb").append('<div class="col"><div class="delta-frame" style="width: 175px" ><div class="thumbnail"><div class="img-wrapper"><img src="' + s3_url_images + this_thumbnail + '"  ></div><div class="caption text-center">' + this.rekog_label + '</div></div></div></div>');
 
                 });;
             });
+            $.getJSON(s3_url + "list-word.json", function(json) {
+                $("#please_wait").remove();
+                $("#rekog_list-word").html('');
+                $("#rekog_list-word").append('<h3>Word</h3>');
+                $("#label-header").hide();
+
+                $.each(json, function() {
+                    // console.log(this)
+                    if (typeof this.id_filename != "undefined") {
+                        this_thumbnail = this.id_filename;
+                    } else {
+                        this_thumbnail = 'static.jpg'
+                    }
+                    // $("#rekog_list").append('<div class="col"><a href="index.html?label=' + this.rekog_label + '">' + this.rekog_label + '</a></div>');
+                    $("#rekog_list-word").append('<div class="col"><div class="delta-frame" style="width: 175px" ><div class="thumbnail"><div class="img-wrapper"><img src="' + s3_url_images + this_thumbnail + '"  ></div><div class="caption text-center">' + this.rekog_label + '</div></div></div></div>');
+
+                });;
+            });            
             $.getJSON(s3_url + "list-vod.json", function(json) {
                 $.each(json, function() {
                     if ($("#playerdiv_" + this.entry_id).length > 0) {} else {
-                        $.each(this.delta_filters, function(filter_id, filter) {
-                            if (filter.type == "live_to_vod") {
-                                start_time = filter.start_time;
-                                start_frame = pad(filter.start_frame);
-                                start_string = start_time.replace('Z', ':' + start_frame).replace('T', ' ');
-                                live2vod_id = filter_id;
-                            }
-                            if (filter.type == "mp4_package") {
-                                mp4_endpoint = filter.endpoint
-                            }
-
-                        });
-                        $("#rekog_list-vids").append('<div id="row_' + this.entry_id + '" class="row row-striped" style=""  ></div>');
+                        $("#rekog_list-vod").append('<div id="row_' + this.entry_id + '" class="row row-striped" style=""  ></div>');
                         // $("#row_" + this.entry_id).append('<div id="chooser_' + this.entry_id + '" class="col-md-1" style="" ><p>Chosen Frames</p></div>')
                         // $("#chooser_" + this.entry_id).append('<div class="row"><div class="col-sm-12" ><div class="delta-frame" ><div class="thumbnail"><div class="img-wrapper"><img src="' + this.time_start_image + '"  ></div><div class="caption text-center">Start Frame</div></div></div></div></div>');
                         // $("#chooser_" + this.entry_id).append('<div class="row"><div class="col-sm-12" ><div class="delta-frame" ><div class="thumbnail"><div class="img-wrapper"><img src="' + this.time_end_image + '"  ></div><div class="caption text-center">End Frame</div></div></div></div></div>');
                         if (which_time == 'first') {
 
                         } else {
-                            $("#rekog_list-vids").prepend('<div id="row_' + this.entry_id + '" class="row row-striped" style=""  ></div>');
-
+                            $("#rekog_list-vod").prepend('<div id="row_' + this.entry_id + '" class="row row-striped" style=""  ></div>');
+                            $("#row_"+this.entry_id).append('<div id="top-row_' + this.entry_id + '" class="row row-striped" style=""  ></div>');
+                            $("#row_"+this.entry_id).append('<div id="middle-row_' + this.entry_id + '" class="row row-striped" style=""  ></div>');
+                            $("#row_"+this.entry_id).append('<div id="bottom-row_' + this.entry_id + '" class="row row-striped" style=""  ></div>');
+                            
                         }
-                        $("#row_" + this.entry_id).append('<div id="playerdiv_' + this.entry_id + '" class="col-md-4" style="width: 360px;"  ><div class="row" style=""><a href="index.html?label=' + this.label + '"><div class="col-md-6 col-md-offset-3 time" style="font-size: 120%; margin-top: 10px" id="playerdivtime_' + this.entry_id + '">' + this.label + '</div></a></div><div class="row" ><div class="col-md-12 video" onclick="startPlayer(\'' + mp4_endpoint + '\', \'' + this.entry_id + '\')"><span id="thumbnailspan_' + this.entry_id + '"></span><img  id="thumbnail_' + this.entry_id + '" style=" width: 100%;" class=" img-responsive img-rounded" src="' + s3_url + this.label_image + '" ></div></div></div>');
+                        this_entry_id = this.entry_id;
 
-                        $("#row_" + this.entry_id).append('<div id="delta_' + this.entry_id + '" class="col-md-6" style=""  ><p>Delta Filter Info</p><pre class="samplecode even">' + JSON.stringify(this.delta_filters, null, 4) + '</pre></div>');
 
+
+                        $.each(this.hops_backward, function() {
+                            $("#top-row_" + this_entry_id).append('<div class="delta-frame " style="width: 111px" ><div class="thumbnail" ><div class="img-wrapper"><img src="' + s3_url_images + this.id_filename + '"  ></div><div class="caption text-center small">' + this.timestamp_minute + ':' + this.timestamp_second + '</div></div></div>');
+                        });
+                        
+                        $("#top-row_" + this.entry_id).append('<div id="playerdiv_' + this.entry_id + '" class="col-md-6" style="width: 360px;"  ><div class="row" style=""><a href="index.html?label=' + this.label + '"><div class="col-md-6 col-md-offset-3 time" style="font-size: 120%; margin-top: 10px" id="playerdivtime_' + this.entry_id + '">' + this.label + '</div></a></div><div class="row" ><div class="col-md-12 video" onclick="startPlayer(\'' + this.emp_url + '\', \'' + this.entry_id + '\')"><span id="thumbnailspan_' + this.entry_id + '"></span><img  id="thumbnail_' + this.entry_id + '" style=" width: 100%;" class=" img-responsive img-rounded" src="' + s3_url_images + this.label_image + '" ></div></div></div>');
+
+                        $.each(this.hops_forward, function() {
+                            $("#top-row_" + this_entry_id).append('<div class="delta-frame " style="width: 111px" ><div class="thumbnail" ><div class="img-wrapper"><img src="' + s3_url_images + this.id_filename + '"  ></div><div class="caption text-center small">' + this.timestamp_minute + ':' + this.timestamp_second + '</div></div></div>');
+                        });
+
+                        $("#bottom-row_" + this.entry_id).append('<div id="delta_' + this.entry_id + '" class="col-md-4" style=""  ><p>Backwards</p><pre class="samplecode even">' + JSON.stringify(this.messages_backward, null, 4) + '</pre></div>');
+                        $("#bottom-row_" + this.entry_id).append('<div id="delta_' + this.entry_id + '" class="col-md-4" style=""  ><p>Fowards</p><pre class="samplecode even">' + JSON.stringify(this.messages_forward, null, 4) + '</pre></div>');
+                        
                     }
                 });
             });
@@ -266,7 +289,7 @@
             }
             /// TOODO : add html to load the player
             // temp_html = '<div id="details_' + id + '"  ><video id="player_' + id + '" style="width: 576px; height: 324px" class="video-js center-block" > <source src="' + url + '" type="video/mp4">  </video></div>';
-            temp_html = '<div id="details_' + id + '"  ><video id="player_' + id + '" style="width: 320; height: 180px; margin: 0 0 0 0 ;" class="video-js center-block" > <source src="' + url + '" type="video/mp4">  </video></div>';
+            temp_html = '<div id="details_' + id + '"  ><video id="player_' + id + '" style="width: 320; height: 180px; margin: 0 0 0 0 ;" class="video-js center-block" > <source src="' + url + '" type="application/x-mpegURL">  </video></div>';
             $("#playerdiv_" + id).append(temp_html);
             $("#thumbnail_" + id).hide();
             $("#thumbnailspan_" + id).hide();
@@ -359,26 +382,9 @@
         </div>
 
         <div id="celeb"></div>
-        <div id="label-header" style="display: none">
-            <div class="row row-striped">
-                <div class="col-md-5">
-                    <h3>Before Moment of Interest</h3>
-                    <p>Use the sliders labeled "Backward Duration" and "Backward Scene Detection" to see a realtime preview so you can configure the automation that will find the start of the Live to VOD archive. </p>
-                </div>
-                <div class="col-md-2 ">
-                    <h3>Moment of Interest</h3>
-                    <p>The label detected by Rekognition and the anchor of why the automation will choose a time for the Live to VOD archive.</p>
-                </div>
-                <div class="col-md-5">
-                    <h3>After the Moment of Interest</h3>
-                    <p>Use the sliders labeled "Forward Duration" and "Forward Scene Detection" to see a realtime preview of those desired settings. Pressing the "Update" button will place these user defined parameters into the automation system. You can
-                        view the results in the landing page of this demo after the label has been detected and processed.</p>
-                </div>
-            </div>
-        </div>
 
         <div id="label">
-            <div class="row">
+            <!-- <div class="row">
                 <div class="col-md-4">
                     <h2>Rekognition by Labels</h2>
                     <p>Labels indexed realtime from a HLS Livestream. Updates every 10 seconds. Click the label to define Duration parameters for Automated Live to VOD submissions. </p>
@@ -389,16 +395,17 @@
 
                 </div>
                 <div class="col-md-5">
-                    <h2>Delta Frame Accurate Live to VOD</h2>
+                    <h2>Live to VOD</h2>
                     <p>Archive submitted from automation using Rekogntion, Scene Change Detection, and User defined durations per label aka the "Moment of Interest"</p>
                 </div>
                 <h2>
-            </div>
+            </div> -->
 
             <div class="row">
-                <div class="col-md-4 bg-success" id="rekog_list-label"></div>
-                <div class="col-md-3 bg-info" id="rekog_list-celeb"></div>
-                <div class="col-md-5 " id="rekog_list-vids"></div>
+                <div class="col-md-1 bg-success" id="rekog_list-label"></div>
+                <div class="col-md-1 bg-info" id="rekog_list-celeb"></div>
+                <div class="col-md-1 bg-warning" id="rekog_list-word"></div>
+                <div class="col-md-8 " style="margin-left: 30px" id="rekog_list-vod"></div>
             </div>
         </div>
         <div id="list"> </div>

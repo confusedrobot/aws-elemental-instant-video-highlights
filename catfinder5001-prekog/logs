@@ -1,0 +1,1 @@
+awslogs get /aws/lambda/catfinder5001-prekog ALL --watch

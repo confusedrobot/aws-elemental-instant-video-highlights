@@ -1,0 +1,117 @@
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width">
+    <link rel="stylesheet" href="elemental.css">
+
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <!-- Videojs player -->
+    <link href="http://vjs.zencdn.net/6.6.3/video-js.css" rel="stylesheet">
+    <!-- HLS Player through the CDN -->
+    <script src="https://vjs.zencdn.net/6.6.3/video.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-contrib-hls/5.12.2/videojs-contrib-hls.js"></script>
+    <style>
+        pre {
+            background: #000 !important;
+            color: #fff !important;
+        }
+        
+        .elem-footer,
+        .elem-footer ul {
+            margin-left: 0px;
+            margin-right: 0px;
+            width: 100%;
+        }
+        
+        #tab_secondary .nav>li>a {
+            padding-top: 5px;
+            padding-bottom: 5px;
+        }
+        
+        #tab_secondary .nav {
+            padding-top: 0px;
+            padding-bottom: 0px;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+    <script>
+        s3_hostname = 'http://adkitten-dev.s3-website-us-east-1.amazonaws.com'
+        s3_url = s3_hostname + '/images/';
+        update_list();
+        list_timer = setInterval(update_list, 4000);
+        function update_list() {
+            $.getJSON(s3_hostname + "/list-ads.json?random=" + Math.random(), function(json) {
+                $("#please_wait").remove();
+                $("#images_matches").html('');
+                $("#images_matches").append('<h3>Matched Labels <span style="font-size: 45%">at ' + json.timestamps.end + '</span></h3><div class="alert alert-info" role="alert"><strong>ADS Server: </strong>Labels that the ADS server matched to ads listed below.</div>');
+                $.each(json.images_matches, function( index, value ) {
+                    $("#images_matches").append('<div class="col"><div class="delta-frame" style="width: 130px" ><div class="thumbnail"><div class="img-wrapper"><img src="' + s3_url + value.image + '"  ></div><div class="caption text-center" style="white-space: nowrap"><strong>' + value.type.replace(/_/g, ' ') + '</strong> <br>[ ' + index + ' ]</div></div></div></div>');
+                });;
+                $("#images_matches").append('<div class="clearfix"></div><hr /><h3>All Labels <span style="font-size: 45%">from ' + json.timestamps.start + ' to ' + json.timestamps.end + '</span></h3><div class="alert alert-info" role="alert"><strong>Rekognition: </strong>A complete list of Labels detected by Rekognition passed to the ADS server.</div>');                
+                $.each(json.images_list, function( index, value ) {
+                    $("#images_matches").append('<div class="col"><div class="delta-frame" style="width: 110px" ><div class="thumbnail"><div class="img-wrapper"><img src="' + s3_url + value + '"  ></div><div class="caption text-center" style="white-space: nowrap">' + index + '</div></div></div></div>');
+                });;
+                
+            });  
+            $.getJSON(s3_hostname + "/list-label.json?random=" + Math.random(), function(json) {
+                $("#images_list").html('');
+                $("#images_list").append('<h3>Live Labels</h3>');
+                $.each(json, function( ) {
+                    $("#images_list").append('<div class="col"><div class="delta-frame" style="width: 110px" ><div class="thumbnail"><div class="img-wrapper"><img src="' + s3_url + this.id_filename + '"  ></div><div class="caption text-center" style="white-space: nowrap">' + this.rekog_label + '</div></div></div></div>');
+                });;
+            });  
+            // $.getJSON("list-celeb.json", function(json) {
+            //     // $("#images_list").html('');
+            //     // $("#images_list").append('<h3>Live Labels</h3>');
+            //     $.each(json, function( ) {
+            //         $("#images_list").append('<div class="col"><div class="delta-frame" style="width: 110px" ><div class="thumbnail"><div class="img-wrapper"><img src="' + s3_url + this.id_filename + '"  ></div><div class="caption text-center" style="white-space: nowrap">' + this.rekog_label + '</div></div></div></div>');
+            //     });;
+            // });            
+        }      
+    </script>
+    </head>
+    <body>
+        <div class="container-fluid">
+                <div class="row" id="top_header">
+                        <div class="col-md-12 elem-header" style="padding: 10px 5px 10px 5px; ">
+                            <a href="index.html" class="elemental-logo"><img style="width:150px" src="/AWS_Elemental_logo_COLOR.png"></a>
+                        </div>
+                    </div>
+                    <div class="row elem-footer" id="tab_primary"> </div>
+                    <div class="row elem-footer hidden" id="tab_secondary"> </div>            
+            <div class="row">
+                <div class="col-6">
+                        <div class="row">
+                            <div class="col-12">
+                                <video id="player_emt" style="width: 640px; height: 360px" class="video-js center-block" > <source src="https://843a9306cc384701bfeb3a61cd30cfcb.mediatailor.us-east-1.amazonaws.com/v1/master/b8f1615707636462c36a63ae44ebf73f85d6ef9e/adkitten/index.m3u8" type="application/x-mpegURL">  </video><script>videojs('player_emt', { "width": 640, "height": 360, "controls": true, "autoplay": true, "muted": true, "preload": "auto" });</script> 
+                            </div>
+                        </div>
+                        <div class="row"><div class="col-12"><p class="text-center">AWS Elemental Media Tailor</p></div></div>
+                    </div>
+                        
+                <div class="col-6">
+                    <div class="row">
+                        <div class="col-12">
+                            <video id="player_emp" style="width: 640px; height: 360px" class="video-js center-block" > <source src="https://cf98fa7b2ee4450e.mediapackage.us-east-1.amazonaws.com/out/v1/0778236768de40bfa2c24495efa230f4/index.m3u8" type="application/x-mpegURL">  </video><script>videojs('player_emp', { "width": 640, "height": 360, "controls": true, "autoplay": true, "muted": true, "preload": "auto" });</script> 
+                        </div>
+                    </div>
+                    <div class="row"><div class="col-12"><p class="text-center">AWS Elemental Media Package</p></div></div>
+                </div>
+                               
+            </div>
+            <div class="row">
+                <div class="col-6">
+                    <div id="please_wait"><i>loading...</i></div>
+                    <div id='images_matches'></div>
+                </div>
+                        
+                <div class="col-6">
+                    <div id='images_list'></div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>

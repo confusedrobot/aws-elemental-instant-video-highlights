@@ -13,18 +13,29 @@ import botocore
 from botocore.client import ClientError
 from boto3.dynamodb.conditions import Key, Attr
 import uuid
+from aws_xray_sdk.core import xray_recorder
+from aws_xray_sdk.core import patch_all
+import sys
 
-## These are unique and must be set
+# patch_all()
+XRAY = 'true'
+
+## these are unique and must be set
 S3_BUCKET = "not-set"
 HLS_URL = 'not-set'
+HLS_URL_PLAYLIST = 'not-set'
+CHANNEL_NAME = 'not-set'
 
 ## hardcoded for console use
-DYNAMO_MAIN = "catfinder5000-main"
-DYNAMO_LIST = "catfinder5000-list"
-DYNAMO_SUMMARY = "catfinder5000-summary"
+# DYNAMO_MAIN = "catfinder5002-main"
+DYNAMO_MAIN_GSI = "id_type-id_filename-index"
+# DYNAMO_LIST = "catfinder5002-list"
+# DYNAMO_SUMMARY = "catfinder5002-summary"
 DYNAMO_SUMMARY_GSI = 'rekog_type-timestamp_updated-index'
-LAMBDA_PREKOG = "catfinder5000-prekog"
+# LAMBDA_PREKOG = "catfinder5002-prekog"
 REKOG_LABEL = "Cat"
+ENABLE_PREKOG = 'false'
+
 
 FFPROBE = './ffprobe'
 FFMPEG = './ffmpeg'
@@ -33,18 +44,73 @@ s3 = boto3.resource('s3')
 dynamodb = boto3.resource('dynamodb')
 rekognition = boto3.client("rekognition")
 lambda_client = boto3.client('lambda')
+medialive = boto3.client("medialive", region_name='us-east-1')
+# transcribe = boto3.client('transcribe', region_name='us-east-1')
 
+
+class Timeout(Exception):
+     """Timeout exception"""
+     pass
+ 
+class _timeout:
+    """Timeout handler"""
+    def __init__(self, secs = None): self.secs = secs
+    def __enter__(self):
+        if self.secs is not None:
+            signal.signal(signal.SIGALRM, self.handle)
+            signal.alarm(self.secs)
+    def handle(self, sig, frame): raise Timeout()
+    def __exit__(self, type, val, traceback):
+        if self.secs is not None: signal.alarm(0)
 
 def get_environment_variables():
     global S3_BUCKET
     global HLS_URL
+    global HLS_URL_PLAYLIST
     global DYNAMO_MAIN
     global DYNAMO_LIST
     global DYNAMO_SUMMARY
     global DYNAMO_SUMMARY_GSI
     global LAMBDA_PREKOG
     global REKOG_LABEL
+    global CHANNEL_NAME
+    global ENABLE_PREKOG
 
+    if os.environ.get('CHANNEL_NAME') is not None:
+        CHANNEL_NAME = os.environ['CHANNEL_NAME']
+        print('environment variable CHANNEL_NAME was found: {}'.format(CHANNEL_NAME))
+    token = ''
+    channels = []
+    with _timeout(None):
+        while True:
+            chan = medialive.list_channels(NextToken=token)
+            token = chan.get('NextToken', '')
+            channels.extend(chan['Channels'])
+            if token == '': break    
+    for ch in channels:
+        if ch['Name'] == CHANNEL_NAME:
+            channel_id = ch['Id']
+            print('Channel Name was matched to Channel ID: {}'.format(channel_id))
+            for destination in ch['Destinations']:
+                if destination['Settings'][0]['Url'].split('://')[0] == 's3':
+                    S3_BUCKET = destination['Settings'][0]['Url'].split('://')[1].split('/')[0]
+                    HLS_URL = "/".join(destination['Settings'][0]['Url'].split('://')[1].split('/')[1:])
+            channel = medialive.describe_channel(ChannelId=channel_id)
+            for outputgroup in channel['EncoderSettings']['OutputGroups']:
+                if outputgroup['Name'] == 'S3 Bucket':
+                    HLS_URL_PLAYLIST = HLS_URL + outputgroup['Outputs'][0]['OutputSettings']['HlsOutputSettings']['NameModifier']
+            HLS_URL = HLS_URL + '.m3u8'
+            HLS_URL_PLAYLIST = HLS_URL_PLAYLIST + '.m3u8'
+            print('autosetting variable S3_BUCKET to: {}'.format(S3_BUCKET))
+            print('autosetting variable HLS_URL to: {}'.format(HLS_URL))
+            print('autosetting variable HLS_URL_PLAYLIST to: {}'.format(HLS_URL_PLAYLIST))
+        else:
+            print('Channel was not Found')
+
+
+    if os.environ.get('ENABLE_PREKOG') is not None:
+        ENABLE_PREKOG = os.environ['ENABLE_PREKOG']
+        print('environment variable ENABLE_PREKOG was found: {}'.format(ENABLE_PREKOG))
     if os.environ.get('S3_BUCKET') is not None:
         S3_BUCKET = os.environ['S3_BUCKET']
         print('environment variable S3_BUCKET was found: {}'.format(S3_BUCKET))
@@ -66,6 +132,9 @@ def get_environment_variables():
     if os.environ.get('HLS_URL') is not None:
         HLS_URL = os.environ['HLS_URL']
         print('environment variable HLS_URL was found: {}'.format(HLS_URL))
+    if os.environ.get('HLS_URL_PLAYLIST') is not None:
+        HLS_URL_PLAYLIST = os.environ['HLS_URL_PLAYLIST']
+        print('environment variable HLS_URL_PLAYLIST was found: {}'.format(HLS_URL_PLAYLIST))
     if os.environ.get('REKOG_LABEL') is not None:
         REKOG_LABEL = os.environ['REKOG_LABEL']
         print('environment variable REKOG_LABEL was found: {}'.format(REKOG_LABEL))
@@ -90,6 +159,7 @@ def get_url(url, time = 20):
         print( error_message )
     else:
         return output
+
 def ensure_dir(file_path):
     directory = os.path.dirname(file_path)
     if not os.path.exists(directory):
@@ -106,6 +176,15 @@ def delete_file(myfile):
         # print("Success: %s file was deleted" % myfile)
     else:    ## Show an error ##
         print("Error: %s file not found" % myfile)
+
+def get_s3file(BUCKET_NAME, KEY, LOCALFILE):
+    try:
+        s3.Bucket(BUCKET_NAME).download_file(KEY, LOCALFILE)
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == "404":
+            print("The object does not exist. 404")
+        else:
+            raise
 
 def update_dyanmo_summary ( rekog_summary ):
     ## DynamoDB Update
@@ -125,7 +204,7 @@ def update_dyanmo_summary ( rekog_summary ):
         # ConditionExpression="job_state <> :completed",
         ReturnValues="UPDATED_NEW"
     )
-    print("dynamo update_item succeeded: {}".format(response))
+    # print("dynamo update_item succeeded: {}".format(response))
     # pprint(response)
 
 def put_dynamo_main(dynamo_object):
@@ -137,42 +216,145 @@ def put_dynamo_main(dynamo_object):
             ConditionExpression='attribute_not_exists(id_filename)'
         )
         print("dynamo put_item succeeded: {}".format(response))
-    except ClientError as e:
+    except Exception as e:
         # Ignore the ConditionalCheckFailedException, bubble up other exceptions.
+        print("pizzaninja: {}".format(e)) 
+        print('broken dynamo: {}'.format(dynamo_object))
         if e.response['Error']['Code'] != 'ConditionalCheckFailedException':
-            raise
+            raise e
+        sys.exc_clear()
 
 def invoke_lambda(dynamo_object):
-    invoke_response = lambda_client.invoke(FunctionName=LAMBDA_PREKOG,  InvocationType='Event', Payload=json.dumps(dynamo_object, cls=DecimalEncoder))
-    print("invoke: {}".format(dynamo_object))
-    print("invoke " + str(LAMBDA_PREKOG) + " code: " + str(invoke_response['StatusCode']))
+    if ENABLE_PREKOG == 'true':
+        invoke_response = lambda_client.invoke(FunctionName=LAMBDA_PREKOG,  InvocationType='Event', Payload=json.dumps(dynamo_object, cls=DecimalEncoder))
+        print("invoke: {}".format(dynamo_object))
+        print("invoke " + str(LAMBDA_PREKOG) + " code: " + str(invoke_response['StatusCode']))
+    else:
+        print("PREKOG was disabled, did not run")
 
-def parse_manifest(url_full):  
+def write_json():
+
+    ## set tmp directory
+    tmpdir = '/tmp/' + str(uuid.uuid4()) + '/'
+    ensure_dir(tmpdir)
+
+    if ENABLE_PREKOG == 'true':
+        print("query of table: " + str(DYNAMO_LIST))
+        table = dynamodb.Table(DYNAMO_LIST)    
+        response = table.query(
+            Limit=5,
+            ScanIndexForward=False,
+            KeyConditionExpression=Key('label').eq(REKOG_LABEL),
+        )
+        json_string = json.dumps(response['Items'], cls=DecimalEncoder)
+        dynamo_filename = 'list-vod.json'
+        with open(tmpdir + dynamo_filename, 'w') as outfile:
+            outfile.write(json_string)
+
+        ## S3 upload
+        data = open(tmpdir + dynamo_filename, 'rb')
+        pprint(s3.Bucket(S3_BUCKET).put_object(Key=dynamo_filename, Body=data))
+        delete_file(tmpdir + dynamo_filename)
+
+    rekog_type = 'label'
+    print("query of table: " + str(DYNAMO_SUMMARY))
+    table = dynamodb.Table(DYNAMO_SUMMARY)    
+    response = table.query(
+        Limit=45,
+        IndexName=DYNAMO_SUMMARY_GSI,        
+        ScanIndexForward=False,
+        KeyConditionExpression=Key('rekog_type').eq(rekog_type),
+    )
+    json_string = json.dumps(response['Items'], cls=DecimalEncoder)
+    dynamo_filename = 'list-' + rekog_type + '.json' 
+    with open(tmpdir + dynamo_filename, 'w') as outfile:
+        outfile.write(json_string)
+    ## S3 upload
+    data = open(tmpdir + dynamo_filename, 'rb')
+    pprint(s3.Bucket(S3_BUCKET).put_object(Key=dynamo_filename, Body=data))
+    delete_file(tmpdir + dynamo_filename)
+
+    rekog_type = 'celeb'
+    print("query of table: " + str(DYNAMO_SUMMARY))
+    table = dynamodb.Table(DYNAMO_SUMMARY)    
+    response = table.query(
+        Limit=45,
+        IndexName=DYNAMO_SUMMARY_GSI,        
+        ScanIndexForward=False,
+        KeyConditionExpression=Key('rekog_type').eq(rekog_type),
+    )
+    json_string = json.dumps(response['Items'], cls=DecimalEncoder)
+    dynamo_filename = 'list-' + rekog_type + '.json'
+    with open(tmpdir + dynamo_filename, 'w') as outfile:
+        outfile.write(json_string)
+    ## S3 upload
+    data = open(tmpdir + dynamo_filename, 'rb')
+    pprint(s3.Bucket(S3_BUCKET).put_object(Key=dynamo_filename, Body=data))
+    delete_file(tmpdir + dynamo_filename)
+
+    rekog_type = 'word'
+    print("query of table: " + str(DYNAMO_SUMMARY))
+    table = dynamodb.Table(DYNAMO_SUMMARY)    
+    response = table.query(
+        Limit=45,
+        IndexName=DYNAMO_SUMMARY_GSI,        
+        ScanIndexForward=False,
+        KeyConditionExpression=Key('rekog_type').eq(rekog_type),
+    )
+    json_string = json.dumps(response['Items'], cls=DecimalEncoder)
+    dynamo_filename = 'list-' + rekog_type + '.json'
+    with open(tmpdir + dynamo_filename, 'w') as outfile:
+        outfile.write(json_string)
+    ## S3 upload
+    data = open(tmpdir + dynamo_filename, 'rb')
+    pprint(s3.Bucket(S3_BUCKET).put_object(Key=dynamo_filename, Body=data))
+    delete_file(tmpdir + dynamo_filename)
+
+segment_duration = 10
+def lambda_handler(event, context):
+    if XRAY == 'true':
+        patch_all()    
+    get_environment_variables()  
+    print('S3_BUCKET: {}'.format(S3_BUCKET))
+    print('HLS_URL: {}'.format(HLS_URL))
+    print('HLS_URL_PLAYLIST: {}'.format(HLS_URL_PLAYLIST))
     master_ttl = 3600
-
+    if(HLS_URL_PLAYLIST != urllib.unquote_plus(event['Records'][0]['s3']['object']['key'].encode('utf8'))):
+        return 'wrong manifest'
+    # s3_version = event['Records'][0]['s3']['object']['versionId']
     # PARSE manifest
-    print("master manifest: " + url_full)
+    print("master manifest: " + HLS_URL)
 
     # wrangle the urls
-    base_url = '/'.join(url_full.split('/')[:-1]) + '/'
+    base_url = 'live/'
     print("baseurl: {}".format(base_url))
-    filename_master = url_full.split('/')[-1]
+    filename_master = HLS_URL.split('/')[-1]
     print("filename_master: {}".format(filename_master))
 
+    ## set tmp directory
+    tmpdir = '/tmp/' + str(uuid.uuid4()) + '/'
+    ensure_dir(tmpdir)
+
     # GET master manifest
-    string_master = get_url(base_url + filename_master)
-    print("string_master: {}".format(string_master))
+    get_s3file(S3_BUCKET, HLS_URL, tmpdir + filename_master)
+    string_master = open(tmpdir + filename_master, 'r').read()
+    # print("string_master: {}".format(string_master))
 
     # PARSE frame rate for the segments
-    segment_framerate = float(string_master.split('FRAME-RATE=')[1].split('\n')[0])
+    segment_framerate = float(string_master.split('FRAME-RATE=')[1].split(',')[0])
     print("segment_framerate: {}".format(segment_framerate))
 
+    ## Note: this is not needed, but could use it as a checksum 
     # PARSE the m3u8 child manifestss. Returns list of these strings
-    filename_playlists = [x for x in string_master.split('\n') if '.m3u8' in x]
-    print("filename_playlists: {}".format(filename_playlists))
+    # filename_playlists = [x for x in string_master.split('\n') if '.m3u8' in x]
+    # print("filename_playlists: {}".format(filename_playlists))
+    
+    filename_playlist = HLS_URL_PLAYLIST.split('/')[-1]
+    print("filename_playlist: {}".format(filename_playlist))
 
     # GET child manifest
-    string_playlist = get_url(base_url + filename_playlists[0])
+    get_s3file(S3_BUCKET, HLS_URL_PLAYLIST, tmpdir + filename_playlist)
+    string_playlist = open(tmpdir + filename_playlist, 'r').read()
     # print("string_playlist: {}".format(string_playlist))
 
     # PARSE list of DATE-time and segment name and get last one
@@ -217,41 +399,63 @@ def parse_manifest(url_full):
     filename_base = segment_filename.split('.ts')[0]
     print('filename_base: {}'.format(filename_base))
 
-    ## set tmp directory
-    tmpdir = '/tmp/' + str(uuid.uuid4()) + '/'
-    ensure_dir(tmpdir)
-
     # get the physical segment file
-    save_file(tmpdir + segment_filename, get_url(base_url + segment_filename))
+    get_s3file(S3_BUCKET, base_url + segment_filename, tmpdir + segment_filename)
 
     ### FFPROBE - get start PTS time
     output_ffprobe1 = os.popen(FFPROBE + ' ' + tmpdir + segment_filename + ' -v quiet -show_streams -of json ').read()
     ffprobe_json1 = json.loads(output_ffprobe1)
     start_time = ffprobe_json1['streams'][0]['start_time']
     print('start_time: {}'.format(start_time))
-
+    
     ### FFPROBE - get scene change information
     output_ffprobe = os.popen(FFPROBE + ' -v quiet -show_streams -show_frames -of json -f lavfi "movie=' + tmpdir + segment_filename + ',select=gt(scene\,.1)"').read()
     ffprobe_json = json.loads(output_ffprobe)
     scenedetect = {}
     for f in ffprobe_json['frames']:
         this_time = float(f['pkt_pts_time']) - float(start_time)
-        this_frame = int(round(this_time * 30 + 1, 0))
+        this_frame = int(round(this_time * int(segment_framerate) + 1, 0))
         this_percent = int(round(float(f['tags']['lavfi.scene_score']),2) * 100)
-        print('\tframe this_time: {} \tthis_frame: {} \tthis_percent: {}%'.format(this_time, this_frame, this_percent))
+        print('scenechange \tthis_frame: {} \tthis_percent: {}%'.format(this_frame, this_percent))
         scenedetect[str(this_frame)] = this_percent
-    # pprint(scenedetect)
+    pprint(scenedetect)
 
+    ## FFMPEG - generate a wav file
+    wav_ffmpeg = os.popen(FFMPEG + ' -hide_banner -nostats -loglevel error -y -i ' + tmpdir + segment_filename + ' -vn -acodec pcm_s16le -ab 64k -ar 16k -ac 1 "' + tmpdir + filename_base + '.wav"  > /dev/null 2>&1 ').read()
+    ## S3 upload
+    data = open(tmpdir + filename_base + '.wav', 'rb')
+    pprint(s3.Bucket(S3_BUCKET).put_object(Key='audio/' + filename_base + '.wav', Body=data))
+    delete_file(tmpdir + filename_base + '.wav')
+    ## TODO - trigger trainscribe lambda
+
+    ## info for the whole segment
+    dynamo_segment_object={
+        'id_filename': filename_base + '-' + str(1).zfill(3) + '.jpg',
+        'id_type': 'segment',
+        'timestamp_minute': datetime_datetime.strftime("%Y-%m-%d %H:%M"),
+        'timestamp_second': datetime_datetime.strftime("%S"),
+        'timestamp_frame' : datetime_frame,
+        'timestamp_pdt' : segment_datetime,
+        'framerate' : str(segment_framerate),
+        'duration' : segment_duration,
+        'audio_file': filename_base + '.wav', 
+        'transcribe_status' : 'NOT_SUBMITTED',
+        'timestamp_created' : int((datetime.datetime.utcnow() - datetime.datetime(1970,1,1)).total_seconds()),
+        'timestamp_ttl' : int((datetime.datetime.utcnow() - datetime.datetime(1970,1,1)).total_seconds() + master_ttl) # 2 hours
+    }
+    # raise SystemExit(0)
+    
     ## FFMPEG - generate a jpg for each frame
     output_ffmpeg = os.popen(FFMPEG + ' -hide_banner -nostats -loglevel error -y -i ' + tmpdir + segment_filename + ' -an -sn -vcodec mjpeg -pix_fmt yuvj420p -qscale 1 -b:v 2000 -bt 20M "' + tmpdir + filename_base + '-%03d.jpg"  > /dev/null 2>&1 ').read()
     # delete ts segment
     myfile = tmpdir + segment_filename
     delete_file(myfile)
 
+    scenechange_list = []
+
     # roll file names to next second after total fps 
     x_frame = datetime_frame
     x_filename = 1
-
     ## Cycle through all frames
     for x in xrange(0, frames_total):
         if x_frame >= int(segment_framerate):
@@ -278,18 +482,19 @@ def parse_manifest(url_full):
         if str(x_filename) in scenedetect:
             ## S3 upload
             data = open(tmpdir + dynamo_filename, 'rb')
-            pprint(s3.Bucket(S3_BUCKET).put_object(Key=dynamo_filename, Body=data))
+            pprint(s3.Bucket(S3_BUCKET).put_object(Key='images/' + dynamo_filename, Body=data))
 
             dynamo_object['scenedetect'] = str(scenedetect[str(x_filename)])
             # dynamo_object['scenedetect_round'] = str(int(round(scenedetect[str(x_filename)], -1)))
 
-            ## Run Rekog if scene change is above 10
+            ## Run Rekog if scene change is above 10 
             if scenedetect[str(x_filename)] > 10:
                 ## REKOGNTION -- Labels
                 print("starting rekog.... scenedetect is: " + str(scenedetect[str(x_filename)]))
-                response = rekognition.detect_labels(Image={"S3Object": {"Bucket": S3_BUCKET, "Name": dynamo_filename}})
+                response = rekognition.detect_labels(Image={"S3Object": {"Bucket": S3_BUCKET, "Name": 'images/' + dynamo_filename}})
                 rekog_labels_list = []
                 person_ok = 0
+                text_ok = 0
                 for obj in response['Labels']:
                     rekog_labels_list.append({'Confidence': str(int(round(obj['Confidence']))), 'Name': obj['Name']})
                     ## deltafa-summary
@@ -300,28 +505,56 @@ def parse_manifest(url_full):
                     rekog_summary_dynamo['id_filename'] = dynamo_filename
                     rekog_summary_dynamo['timestamp_updated'] = int((datetime.datetime.utcnow() - datetime.datetime(1970,1,1)).total_seconds())
                     rekog_summary_dynamo['timestamp_ttl'] = int((datetime.datetime.utcnow() - datetime.datetime(1970,1,1)).total_seconds() + master_ttl )
+                    update_dyanmo_summary(rekog_summary_dynamo)
 
+                    ## Found Label, send over to PREKOG lambda
                     if rekog_summary_dynamo['rekog_label'] == REKOG_LABEL:
-                        # rekog_summary_dynamo['timestamp_minute'] = dynamo_minute,
-                        # rekog_summary_dynamo['timestamp_second'] = dynamo_second,
-                        # rekog_summary_dynamo['timestamp_frame'] = dynamo_frame,
-                        # invoke_lambda(rekog_summary_dynamo)
                         dynamo_object['rekog_label'] = obj['Name']
                         invoke_lambda(dynamo_object)
 
-                    if int(round(obj['Confidence'])) > 49:
+                    # if int(round(obj['Confidence'])) > 49:
                         update_dyanmo_summary(rekog_summary_dynamo)
-
+                    if obj['Name'] == 'Text':
+                        text_ok = 1
                     if obj['Name'] == 'Person':
                         person_ok = 1
                 rekog_labels = sorted(rekog_labels_list, key=lambda obj: obj['Confidence'])
                 print('rekog labels: {}'.format(rekog_labels))
                 dynamo_object['rekog_labels'] = rekog_labels
+                ## REKOGNTION -- Text
+                if text_ok == 1:
+                    print("rekog found Text, running OCR....")                
+                    rekog_word_list = []
+                    rekog_text = rekognition.detect_text(Image={"S3Object": {"Bucket": S3_BUCKET, "Name": 'images/' + dynamo_filename}})
+                    print('rekog words: {}'.format(rekog_text))
+                    if rekog_text['TextDetections']:
+                        print('rekog found text in the image')
+                        for obj in rekog_text['TextDetections']:
+                            if obj['Type'] == 'WORD':
+                                rekog_word_list.append({'Confidence': str(int(round(obj['Confidence']))), 'Name': obj['DetectedText']})
+                                ## deltafa-summary
+                                rekog_summary_dynamo = {}
+                                rekog_summary_dynamo['scenedetect'] = str(scenedetect[str(x_filename)])
+                                rekog_summary_dynamo['rekog_label'] = obj['DetectedText']
+                                rekog_summary_dynamo['rekog_type'] = 'word'
+                                rekog_summary_dynamo['id_filename'] = dynamo_filename
+                                rekog_summary_dynamo['timestamp_updated'] = int((datetime.datetime.utcnow() - datetime.datetime(1970,1,1)).total_seconds())
+                                rekog_summary_dynamo['timestamp_ttl'] = int((datetime.datetime.utcnow() - datetime.datetime(1970,1,1)).total_seconds() + master_ttl)
+                                update_dyanmo_summary(rekog_summary_dynamo)
 
+                                ## Found Label, send over to PREKOG lambda
+                                if rekog_summary_dynamo['rekog_label'].upper() == REKOG_LABEL.upper():
+                                    dynamo_object['rekog_label'] = obj['Name']
+                                    invoke_lambda(dynamo_object)
+
+                        print('rekog words: {}'.format(rekog_word_list))
+                        dynamo_object['rekog_words'] = rekog_word_list      
+                    else:
+                        print('rekog did NOT find words...')
                 ## REKOGNTION -- Celeb
                 if person_ok == 1:
                     print("rekog found a Person, running celeb....")                
-                    rekog_celebs = rekognition.recognize_celebrities(Image={"S3Object": {"Bucket": S3_BUCKET, "Name": dynamo_filename}})
+                    rekog_celebs = rekognition.recognize_celebrities(Image={"S3Object": {"Bucket": S3_BUCKET, "Name": 'images/' + dynamo_filename}})
                     if rekog_celebs['CelebrityFaces']:
                         print("rekog found a celeb...")
                         rekog_celebs_list = []
@@ -343,87 +576,66 @@ def parse_manifest(url_full):
                         print("rekog did NOT find celeb...")
                 # PUT DYNAMO - main
                 put_dynamo_main(dynamo_object)
+                scenechange_list.append(dynamo_object['id_filename'])
         # clean up jpgs
         delete_file(tmpdir + dynamo_filename)
 
         x_frame += 1
         x_filename += 1    
-
-
-def write_json():
-
-    ## set tmp directory
-    tmpdir = '/tmp/' + str(uuid.uuid4()) + '/'
-    ensure_dir(tmpdir)
-
-    print("query of table: " + str(DYNAMO_LIST))
-    table = dynamodb.Table(DYNAMO_LIST)    
-    response = table.query(
-        Limit=30,
-        ScanIndexForward=False,
-        KeyConditionExpression=Key('label').eq(REKOG_LABEL),
-    )
-    json_string = json.dumps(response['Items'], cls=DecimalEncoder)
-    dynamo_filename = 'list-vod.json'
-    with open(tmpdir + dynamo_filename, 'w') as outfile:
-        outfile.write(json_string)
-
-    ## S3 upload
-    data = open(tmpdir + dynamo_filename, 'rb')
-    pprint(s3.Bucket(S3_BUCKET).put_object(Key=dynamo_filename, Body=data))
-
-    rekog_type = 'label'
-    print("query of table: " + str(DYNAMO_SUMMARY))
-    table = dynamodb.Table(DYNAMO_SUMMARY)    
-    response = table.query(
-        Limit=30,
-        IndexName=DYNAMO_SUMMARY_GSI,        
-        ScanIndexForward=False,
-        KeyConditionExpression=Key('rekog_type').eq(rekog_type),
-    )
-    json_string = json.dumps(response['Items'], cls=DecimalEncoder)
-    dynamo_filename = 'list-' + rekog_type + '.json'
     
-    with open(tmpdir + dynamo_filename, 'w') as outfile:
-        outfile.write(json_string)
-    ## S3 upload
-    data = open(tmpdir + dynamo_filename, 'rb')
-    pprint(s3.Bucket(S3_BUCKET).put_object(Key=dynamo_filename, Body=data))
+    # full segment information 
+    dynamo_segment_object['scenechange_list'] = scenechange_list
+    pprint(dynamo_segment_object)
+    put_dynamo_main(dynamo_segment_object)
 
-    rekog_type = 'celeb'
-    print("query of table: " + str(DYNAMO_SUMMARY))
-    table = dynamodb.Table(DYNAMO_SUMMARY)    
-    response = table.query(
-        Limit=30,
-        IndexName=DYNAMO_SUMMARY_GSI,        
-        ScanIndexForward=False,
-        KeyConditionExpression=Key('rekog_type').eq(rekog_type),
-    )
-    json_string = json.dumps(response['Items'], cls=DecimalEncoder)
-    dynamo_filename = 'list-' + rekog_type + '.json'
-    
-    with open(tmpdir + dynamo_filename, 'w') as outfile:
-        outfile.write(json_string)
-    ## S3 upload
-    data = open(tmpdir + dynamo_filename, 'rb')
-    pprint(s3.Bucket(S3_BUCKET).put_object(Key=dynamo_filename, Body=data))
-
-segment_duration = 9
-def lambda_handler(event, context):
-    get_environment_variables()  
-    print('S3_BUCKET: {}'.format(S3_BUCKET))
-    print('HLS_URL: {}'.format(HLS_URL))
-    if S3_BUCKET == 'not-set':
-        return 'ERROR: S3_BUCKET was not set'
-    if HLS_URL == 'not-set':
-        return 'ERROR: HLS_URL was not set'
-        
-    for i in range(7):
-        print('starting thread: {}'.format(i))
-        t = Thread(name='rekog', target=parse_manifest, args=(HLS_URL,))
-        t.start()
-        print('sleeping: {}'.format(segment_duration))
-        time.sleep(segment_duration)
-        w = Thread(name='json', target=write_json)
-        w.start()
+    write_json()
     return 'SUCCESS: it ran'
+
+if __name__ == '__main__':
+    ''' 
+    This is to run for local testing
+    '''
+
+    XRAY = 'false' # stop xray when doing local testing
+    FFPROBE = 'ffprobe' # use local mac version 
+    FFMPEG = 'ffmpeg' # use local mac version 
+    # os.environ['HLS_URL'] = 'live/stream.m3u8'
+    # os.environ['HLS_URL_PLAYLIST'] = 'live/stream_1.m3u8'
+    os.environ['ENABLE_PREKOG'] = 'false'
+    os.environ['CHANNEL_NAME'] =  'catfinder5002-testf3daf807-3495-4455-8864-e0348240a429'
+    os.environ['DYNAMO_MAIN'] = 'catfinder5002test-main'    
+    os.environ['DYNAMO_SUMMARY'] = 'catfinder5002test-summary'
+    # os.environ['DYNAMO_LIST'] = 'catfinder5002-list'
+    os.environ['REKOG_LABEL'] = 'Cat'
+    this_event = {
+        u'Records': [
+            {
+                u'eventVersion': u'2.0', 
+                u'eventTime': u'2018-02-28T21:49:14.591Z', 
+                u'requestParameters': {u'sourceIPAddress': u'35.173.106.111'}, 
+                u's3': {
+                    u'configurationId': u'd40f9942-c72b-4f75-8ad6-175f96664136', 
+                    u'object': 
+                    {
+                        u'versionId': u'MK7r.Nxr4CCGY7iy6xjQPxn5Ion1vJEJ', 
+                        u'eTag': u'f6bb9089b283dd7462dfb2c7d9059389',
+                        u'sequencer': u'005A9723DA8F7A27FA',
+                        u'key': u'live/stream_1.m3u8',
+                        u'size': 783
+                       },
+                    u'bucket': {u'arn': u'arn:aws:s3:::catfinder5002-test', u'name': u'catfinder5002-test', u'ownerIdentity': {u'principalId': u'A3O6OAAHVNNGK1'}},
+                    u's3SchemaVersion': u'1.0'
+                },
+                u'responseElements': {u'x-amz-id-2': u'FmenMKJg026LY8uOR1kRojwOB0DepZSEj+4TLsa9SxdwmZpPkDWSn77zFrTUC3zOrtQ/yAgkgmQ=', u'x-amz-request-id': u'80FE17847B7ED4E6'},
+                u'awsRegion': u'us-east-1',
+                u'eventName': u'ObjectCreated:Put',
+                u'userIdentity': {u'principalId': u'AWS:AROAJAMMNNRJLENMQDXH6:container-role'},
+                u'eventSource': u'aws:s3'
+            }
+        ]
+    }
+    print(lambda_handler(this_event, None))
+    with open('deploy', 'w') as outfile:
+        outfile.write('lambda-uploader --variables \'{"CHANNEL_NAME": "' + CHANNEL_NAME + '","DYNAMO_MAIN": "' + DYNAMO_MAIN + '","DYNAMO_SUMMARY": "' + DYNAMO_SUMMARY + '","ENABLE_PREKOG": "' + ENABLE_PREKOG + '" }\'')
+    with open('logs', 'w') as outfile:
+        outfile.write('awslogs get /aws/lambda/catfinder5002test-parse ALL --watch')

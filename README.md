@@ -2,64 +2,31 @@
 
 Demonstration of a frame accurate live-to-VOD solution with automatic machine-learning image recognition Introduction to the AWS services used to create the demonstration Explanation of how the services were combined to create a solution
 
-Then… your turn! Create this service by yourself
+## catfinder5000-parse
 
-Why add frame accurate clipping to AWS Elemental Delta if segment clipping already works? 
+CatFinder5000 is Lambda function that parses a MediaLive's HLS output from a S3 PUT Cloudwatch Event. The "Parse" Lambda function looks for signficant changes in the video by utilizing the FFPROBE's lavfi "scene" filter. Then using FFMPEG, that scene is extracting into a jpeg that is used to invoke Amazon Rekognition. These results are then placed into a DynamoDB database so that other "modules" can utilize this data. 
 
-Remove non-relevant content: previous ad, previous scene… straight to the point
+## catfinder5001-prekog
 
-Reduce time to post (social media era: first post wins all!)
+CatFinder5001 was the first catfinder "module" created. The "Prekog" Lambda function is invoked when a desired Rekognition Label has been detected. The lambda function then utlizes the DynamoDB table to discover when the Label was first detected and when the Label was no longer in the scene using scene accurate timestamps. The catfinder5001-vod Lambda function is invoked with these timestamps. 
 
-## Overall solution workflow
+## catfinder5001-vod
 
-Since we are indexing a live stream, we have to keep in mind this has perpetually run. We don't have the luxury of running a single long running running process through a video and be completed. So we will break this up into sections for easier understanding to see how each one of the Live to VOD clips are generated.
+The "VOD" Lambda function uses the timestamps passed from "Prekog" to download HLS segment files from MediaPackage's Time-shifted Viewing feature Start/End URL Parameters to the S3 bucket. To achieve frame-accuracy, the "VOD" Lambda function then invokes a MediaConvert job's Input Clipping feature which results in an MP4 file in the same S3 bucket. The DynamoDB database is updated with this location so the Website UI can display a player of this video. 
 
-![](images/catfinder5000-workflow.png)
+## catfinder5002-ads
 
-1. The "Live Stream Conversion" is utilizing AWS Elemental Cloud PaaS for both AWS Elemental Live and AWS Elemental Delta.
+The "Ads" Lambda function simulates a ADS server by returning a valid VAST response to MediaTailor. The Labels collected from "Parse" Lambda allows this function to make a decision of which ads to play.
 
-1. The "Content Processing" is utilizing AWS Services to index the livestream created by AWS Elemental products. Read more: [parse lambda](catfinder5000-parse/README.md )
+## catfinder5003-transcribe
 
-1. The "Content Clipping" is utlizing AWS Services to talk to AWS Elemental Delta to create a Live to VOD archive. Read more: [prekog lambda](catfinder5000-prekog/README.md )
+The "Transcribe" Lambda function uses the WAV files created by the "Parse" Lambda function to concat them in to a 1 minute audio archive. These 1 minute WAV file is then passed to Amazon Transcribe and the results are placed in the DynamoDB database. These results are also passed to Amazon Translate and Amazon Comprehend. 
 
-1. The "Asset Playback" is utlizing a static Website hosted in S3 with javascript to dynamically create a dashboard. Read more: [website](catfinder5000-website/README.md )
+## catfinder5000-website
+
+These files are placed in the S3 bucket and using the Static Webstite Hosting to display the results of the various functions used above.
 
 ## AWS Services used under the hood
 
-![](images/catfinder5000-overall.png)
+![](catfinder5001.png)
 
-### Website Preview
-
-Below is what you will see after completing all the modules. This lab will utilize a static website to see the results of your backend processes working in realtime.
-
-![](images/catfinder5000-preview.png)
-
-### Gotta Catch them All
-
-What do people like to watch on the internet? We will use a lot of technology to create cat videos.
-
-![](images/catfinder5000-cat.png)
-
-In this lab, you will be creating the "Catfinder-5000"! Which was a name I chose to ensure no one has made any S3 bucket names that could conflict. The name "catfinder-5000" also clearly states that it finds cats. ( an the 5000 just makes it more fun to say ) The code currently only matches the Rekognition label "Cat", but can be overridden to any label of your choosing.
-
-## re:Invent Workshop
-
-Start here: Module 0 [Workshop Start](0_AWSElementalLiveDelta/README.md )
-
-### Module Listing
-
-Module 0: [Workshop Start](0_AWSElementalLiveDelta/README.md )
-
-Module 1: [S3 Static Web hosting](1_StaticWebHosting/README.md)
-
-Module 2: [DynamoDB](2_DynamoDB/README.md)
-
-Module 3: [Lambda](3_Lambda/README.md)
-
-Module X: [Extra Credit](X_ExtraCredit/README.md) ( Not required, but you will learn more things! )
-
-Module Z: [Clean Up](Z_CleanUp/README.md) ( Highly recommended to complete so you won't have unnecessary AWS charges )
-
-## License
-
-This library is licensed under the Apache 2.0 License.

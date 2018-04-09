@@ -1,0 +1,1 @@
+lambda-uploader --variables '{"S3_BUCKET": "catfinder5002-dev","DYNAMO_MAIN": "catfinder5002-main" }'

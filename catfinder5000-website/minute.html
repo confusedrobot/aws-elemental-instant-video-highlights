@@ -1,0 +1,265 @@
+<html>
+
+<head>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>    
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<link href="http://vjs.zencdn.net/6.6.3/video-js.css" rel="stylesheet">
+<script src="https://vjs.zencdn.net/6.6.3/video.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-contrib-hls/5.12.2/videojs-contrib-hls.js"></script>
+<script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>    
+
+<script>
+    // s3_url = 'http://ces2018-demo.s3-website-us-east-1.amazonaws.com/'
+    s3_url = '/images/';
+    emp_url = 'https://547f72e6652371c3.mediapackage.us-east-1.amazonaws.com/out/v1/541f4ee7fe6545ffaf72dfb0e337e63b/index.m3u8'
+    update_list();
+    // list_timer = setInterval(update_list, 60000);
+    function update_list() {
+        $.getJSON("list-minute.json", function(json) {
+            $.each(json, function( ) {
+                if(this.transcribe_status == 'COMPLETED'){
+                    if(this.transcribe_transcript != 'IN_PROGRESS'){
+                        this_div_id = this.timestamp_minute.replace(" ", "-").replace(":","");
+                        $('#minutes').append(' <div class="col-xs-3" id="minute-' + this_div_id + '"></div>');
+                        $('#minute-' + this_div_id ).append('<div class="row" style="margin-top: 90px; margin-bottom: 30px"><div class="col-xs-12"><div class="timeline"></div> <div class="timedot" style="cursor: pointer;"></div><div class="sniptitle" style="cursor: pointer;">' + this.timestamp_minute +  '</div></div></div>');
+                        $('#minute-' + this_div_id ).append('<div class="row" ><div class="col-xs-12"><div class="panel panel-default"> <div class="panel-body" id="minute-' + this_div_id + '_body" > </div> </div></div> </div>');
+                        $('#minute-' + this_div_id + '_body').append(' <div id="player_' + this_div_id + '"><a href="#" class="thumbnail"> <img id="poster_' + this_div_id + '" src="/images/stream_120180220T044203_01502-134.jpg" alt="..."></a></div>');
+                        $('#minute-' + this_div_id + '_body').append('<hr /><h4>Transcribe</h4> <div style="height: 300px; overflow: scroll" id="transcript_' + this_div_id + '"></div><br /> <p><i>source:</i> <audio controls><source src="/audio/' + this.id_filename +'" type="audio/wav"> </audio></p> ');
+                        $('#minute-' + this_div_id + '_body').append('<hr /><h4>Translate</h4> <div style="height: 200px; overflow: scroll" id="translate_' + this_div_id + '"></div> ');
+                        $('#minute-' + this_div_id + '_body').append('<hr /><h4>Comprehend</h4> <div style="height: 350px; overflow: scroll" id="comprehend_' + this_div_id + '"></div> ');
+                        $('#minute-' + this_div_id + '_body').append('<hr /><h4>Rekognition</h4> <div style="height: 200px; overflow: scroll" id="rekog_' + this_div_id + '"></div> ');
+                        $('#minute-' + this_div_id + '_body').append('<hr /><h4>Scenes</h4> <div style="height: 200px; overflow: scroll" id="scenechange_' + this_div_id + '" class="row"></div> ')
+                        emp_start = ''
+                        emp_end = ''
+                        // TRANSLATE
+                        // $('#transcript_' + this_div_id).append('<ul class="nav nav-tabs" id="transcript_tabs_' + this_div_id + '" onclick="tempshow(\'transcript_others_' + this_div_id + '\')"></ul>');
+                        // $('#transcript_tabs_' + this_div_id).append('<li class="active"><a data-toggle="tab" href="#transcript_langs_native_' + this_div_id + '">Native</a></li>');
+                        $('#transcript_' + this_div_id).append('<div id="transcript_langs_' + this_div_id + '" class="tab-content"></div>');
+                        // $('#transcript_' + this_div_id).append('<div onclick="tempshow(\'transcript_others_' + this_div_id + '\')" ><br /><b><i>show others</i></b></div>');
+                        // $('#transcript_' + this_div_id).append('<div id="transcript_others_' + this_div_id + '" ></div>');
+
+                        $.each(this.transcribe_transcript.transcripts[0], function(  key, value ) {
+                            if(key != 'comprehend' && key != 'transcript'){
+                                // $('#transcript_tabs_' + this_div_id).append('<li><a data-toggle="tab" href="#transcript_langs_' + key + '_' + this_div_id + '">' + key + '</a></li>');
+                                // $('#transcript_langs_' + this_div_id).append('<div id="transcript_langs_' + key + '_' + this_div_id + '" class="tab-pane fade">' + value + '</div>');
+                                $('#translate_' + this_div_id).append('<div id="transcript_langs_' + key + '_' + this_div_id + '"><h5>' + key + '</h5>' + value + '</div>');
+                            }
+                            
+                        });
+                        $('#transcript_langs_' + this_div_id).append('<div id="transcript_langs_native_' + this_div_id + '" class="tab-pane fade in active"></div>');
+
+                        $.each(this.transcribe_transcript.items, function(  key, value ) {
+                            if(value.type == 'pronunciation'){
+                                $('#transcript_langs_native_' + this_div_id).append('<span onClick="setInOut(\'' + value.pdt.start_time + '\',\'' + value.pdt.end_time + '\')" style="opacity: ' + value.alternatives[0].confidence + '" >' + value.alternatives[0].content + '</span> ');
+                                if(emp_start == ''){
+                                    emp_start = value.emp.start_time
+                                }
+                                emp_end = value.emp.end_time
+                            }
+                            if(value.type == 'punctuation'){
+                                $('#transcript_langs_native_' + this_div_id).append('<span style="opacity: 1" >' + value.alternatives[0].content + '</span> ');
+                                emp_end = value.emp.end_time                                
+                            }
+                            
+                            
+                        });
+                        // COMPREHEND
+                        if (typeof this.transcribe_transcript.transcripts[0].comprehend != "undefined") {
+                            if (typeof this.transcribe_transcript.transcripts[0].comprehend.detect_entities != "undefined") {
+                                $.each(this.transcribe_transcript.transcripts[0].comprehend.detect_entities, function(  key, value ) {
+                                    if ($('#comprehend_' + value.Type + '_' + this_div_id).length){
+                                    }else{
+                                        $('#comprehend_' + this_div_id).append('<ul id="comprehend_' + value.Type + '_' + this_div_id +'" class="list-group" >' + value.Type + '</ul>');
+                                    }                    
+                                    $('#comprehend_' + value.Type + '_' + this_div_id).append('<li class="label label-primary" style="margin-left: 3px; opacity: ' + value.Score + '" > ' + value.Text + ' </li>');
+                                });
+                            }
+                            if (typeof this.transcribe_transcript.transcripts[0].comprehend.sentiment_score != "undefined") {
+                                $.each(this.transcribe_transcript.transcripts[0].comprehend.sentiment_score, function(  key, value ) {
+                                    this_value = parseFloat(value) * 100; 
+                                    $('#comprehend_' + this_div_id).append('<div class="progress"><div class="progress-bar" role="progressbar" aria-valuenow="'+ this_value +'" aria-valuemin="0" aria-valuemax="100" style="width: '+ this_value +'%;">'+ key +'</div></div>');
+                                });
+                            }
+                        }
+                        // PLAYER
+                        $("#player_" + this_div_id).replaceWith('<video id="video_' + this_div_id + '" class="video-js vjs-default-skin" style="width:100%;" controls><source src="' + emp_url + '?start=' + emp_start + '&end=' + emp_end + '" type="application/x-mpegURL"></video><p>from <b>' + emp_start + '</b> to <b>' + emp_end + '</b></p>');
+                        var player = videojs('video_' + this_div_id, { controls: true, autoplay: false, preload: 'auto', fluid: true } );
+                    }
+
+
+                }
+            });
+        })  
+        .done(function(data) {
+            $("#please_wait").remove();
+
+            poster_img = '/images/stream_120180220T044203_01502-134.jpg'
+            $.getJSON("list-scenechange.json", function(json) {
+            $.each(json, function( ) {
+                // console.log(this);
+                this_timestamp = this.timestamp_minute + ':' + this.timestamp_second + ':' + this.timestamp_frame;
+                this_div_id = this.timestamp_minute.replace(" ", "-").replace(":","");
+                // console.log(this_div_id);
+                $.each(this.rekog_labels, function(  key, value ) {
+                    $('#rekog_' + this_div_id).append('<span class="label label-default" onClick="setInOut(\'' + this_timestamp +  '\',\'' + this_timestamp + '\')" style="opacity: ' + value.Confidence / 100 + '">' + value.Name + '</span> ');
+                    
+                });
+                $('#scenechange_' + this_div_id).append('<div class="col-xs-3"><a onClick="setInOut(\'' + this_timestamp +  '\',\'' + this_timestamp + '\')" class="thumbnail"><img id="poster_' + this_div_id + '" src="' + '/images/' + this.id_filename + '" alt="..."></a></div>');
+
+            });
+
+        });
+    });
+
+    }
+    var start_or_end = 'start';
+    function setInOut(start_time,end_time){
+        this_blah = start_or_end;
+        if( this_blah === 'start'){
+            $('#start_time').val(start_time);
+            start_or_end = 'end';
+        }
+        if( this_blah === 'end'){
+            $('#end_time').val(end_time);
+            start_or_end = 'start';
+        }
+
+    }  
+    function tempshow(divid){
+        console.log(divid);
+        $("#" + divid ).show();
+    }      
+</script>
+<style>
+    body{
+        background-color: #555;
+    }
+        /* The heart of the matter */
+    .scrolling-group > .row {
+    overflow-x: auto;
+    white-space: nowrap;
+    }
+    .scrolling-group > .row > .col-xs-3 {
+    display: inline-block;
+    white-space: normal;
+    
+    float: none;
+    }
+    ::-webkit-scrollbar {
+        -webkit-appearance: none;
+        width: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        border-radius: 5px;
+        background-color: rgba(0,0,0,.5);
+        -webkit-box-shadow: 0 0 1px rgba(255,255,255,.5);
+    }
+    .timeline {
+    position: absolute;
+    z-index: 1;
+    top: -5.5px;    
+    left: 0;
+    right: -15px;
+    height: 5px;
+    border-top: 5px solid #6f6f6f;
+}
+.timedot {
+    left: 0;
+    right: 0;
+    background: transparent center 0 no-repeat url(timedot.png);
+    position: absolute !important;
+    z-index: 2;
+    height: 13px;
+    text-align: center;
+    top: -9px !important;    
+}
+.sniptitle {
+    -webkit-transition: left 1s ease;
+    -moz-transition: left 1s ease;
+    -o-transition: left 1s ease;
+    transition: left 1s ease;
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    z-index: 2;
+    line-height: 1;
+    color: #c3c3c3;
+    padding: 0 15px 0 10px;
+    font-size: 14px;
+    height: 14px;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    -ms-transform: rotate(-45deg);
+    -webkit-transform: rotate(-45deg);
+    -moz-transform: rotate(-45deg);
+    -o-transform: rotate(-45deg);
+    transform: rotate(-45deg);
+    -ms-transform-origin: 5px 5px;
+    -webkit-transform-origin: 5px 5px;
+    -moz-transform-origin: 5px 5px;
+    -o-transform-origin: 5px 5px;
+    transform-origin: 5px 5px;
+}
+</style>
+</head>
+<body>
+
+        <nav class="navbar navbar-inverse navbar-fixed-top">
+                <div class="container">
+                  <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                      <span class="sr-only">Toggle navigation</span>
+                      <span class="icon-bar"></span>
+                      <span class="icon-bar"></span>
+                      <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="#">CatFinder 5002</a>
+                  </div>
+                  <div id="navbar" class="navbar-collapse collapse">
+                    <form class="navbar-form navbar-right">
+                      <div class="form-group">
+                        <input type="text" id="start_time" placeholder="start" class="form-control" style="width: 200px">
+                      </div>
+                      <div class="form-group">
+                        <input type="text" id="end_time" placeholder="end" class="form-control" style="width: 200px">
+                      </div>
+                      <button type="submit" class="btn btn-success">Submit</button>
+                    </form>
+                  </div><!--/.navbar-collapse -->
+                </div>
+              </nav>
+          
+              <!-- Main jumbotron for a primary marketing message or call to action -->
+              <div class="jumbotron">
+                <div class="container-fluid">
+                    <h4>Demo</h4>
+                  <!-- <p>Instructions will go here</p> -->
+                  <!-- <p><a class="btn btn-primary btn-lg" href="#" role="button">Learn more &raquo;</a></p> -->
+                </div>
+              </div>
+              <div class="container-fluid scrolling-group">
+                <div id="please_wait">
+                            <p><img style="width: 200px; height: 150px" src="https://i.imgur.com/i6eXrfS.gif" /><i>loading...</i></p>
+                        </div>
+                                  
+                <div class="row" id="minutes" >
+
+                </div>
+
+          
+                <hr>
+          
+                <footer>
+                  <p>&pi;</p>
+                </footer>
+              </div> <!-- /container -->
+</body>
+</html>

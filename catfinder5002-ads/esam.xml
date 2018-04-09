@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SignalProcessingNotification xmlns="urn:cablelabs:iptvservices:esam:xsd:signal:1"	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"	xmlns:common="urn:cablelabs:iptvservices:esam:xsd:common:1"	xmlns:content="urn:cablelabs:md:xsd:content:3.0" xmlns:core="urn:cablelabs:md:xsd:core:3.0"	xmlns:sig="urn:cablelabs:md:xsd:signaling:3.0">
+	<common:BatchInfo batchId="dc44d5ad-fef2-4a4c-9a56-e6c5f565dfcb">
+		<common:Source xsi:type="content:MovieType" uriId="comcast.com-TEST2015052210096017"/>
+	</common:BatchInfo>
+	<!-- Ad -->
+	<ResponseSignal acquisitionPointIdentity="theLeahRMP" acquisitionSignalID="1" signalPointID="1.000" action="create">
+		<sig:NPTPoint nptPoint="60.000"/>
+		<sig:SCTE35PointDescriptor spliceCommandType="06">
+			<sig:SegmentationDescriptorInfo segmentEventId="1" segmentTypeId="52" upidType="9"	upid="5349474E414C3A302E303030" duration="PT90.000S" segmentNum="1"	segmentsExpected="1"/>
+		</sig:SCTE35PointDescriptor>
+	</ResponseSignal>
+	<!-- Ad -->
+	<ResponseSignal acquisitionPointIdentity="theLeahRMP" acquisitionSignalID="2" signalPointID="2.000" action="create">
+		<sig:NPTPoint nptPoint="210.000"/>
+		<sig:SCTE35PointDescriptor spliceCommandType="06">
+			<sig:SegmentationDescriptorInfo segmentEventId="2" segmentTypeId="52" upidType="9"	upid="5349474E414C3A302E303030" duration="PT90.000S" segmentNum="1"	segmentsExpected="1"/>
+		</sig:SCTE35PointDescriptor>
+	</ResponseSignal>
+	<!-- Ad -->
+	<ResponseSignal acquisitionPointIdentity="theLeahRMP" acquisitionSignalID="3" signalPointID="3.000" action="create">
+		<sig:NPTPoint nptPoint="360.000"/>
+		<sig:SCTE35PointDescriptor spliceCommandType="06">
+			<sig:SegmentationDescriptorInfo segmentEventId="3" segmentTypeId="52" upidType="9"	upid="5349474E414C3A302E303030" duration="PT90.000S" segmentNum="1"	segmentsExpected="1"/>
+		</sig:SCTE35PointDescriptor>
+	</ResponseSignal>  
+	<!-- Ad -->
+	<ResponseSignal acquisitionPointIdentity="theLeahRMP" acquisitionSignalID="4" signalPointID="4.000" action="create">
+		<sig:NPTPoint nptPoint="510.000"/>
+		<sig:SCTE35PointDescriptor spliceCommandType="06">
+			<sig:SegmentationDescriptorInfo segmentEventId="4" segmentTypeId="52" upidType="9"	upid="5349474E414C3A302E303030" duration="PT90.000S" segmentNum="1"	segmentsExpected="1"/>
+		</sig:SCTE35PointDescriptor>
+	</ResponseSignal>  
+	<!-- Ad -->
+	<ResponseSignal acquisitionPointIdentity="theLeahRMP" acquisitionSignalID="5" signalPointID="5.000" action="create">
+		<sig:NPTPoint nptPoint="660.000"/>
+		<sig:SCTE35PointDescriptor spliceCommandType="06">
+			<sig:SegmentationDescriptorInfo segmentEventId="5" segmentTypeId="52" upidType="9"	upid="5349474E414C3A302E303030" duration="PT90.000S" segmentNum="1"	segmentsExpected="1"/>
+		</sig:SCTE35PointDescriptor>
+	</ResponseSignal>  
+	<!-- Ad -->
+	<ResponseSignal acquisitionPointIdentity="theLeahRMP" acquisitionSignalID="6" signalPointID="6.000" action="create">
+		<sig:NPTPoint nptPoint="810.000"/>
+		<sig:SCTE35PointDescriptor spliceCommandType="06">
+			<sig:SegmentationDescriptorInfo segmentEventId="6" segmentTypeId="52" upidType="9"	upid="5349474E414C3A302E303030" duration="PT90.000S" segmentNum="1"	segmentsExpected="1"/>
+		</sig:SCTE35PointDescriptor>
+	</ResponseSignal>  
+
+</SignalProcessingNotification>

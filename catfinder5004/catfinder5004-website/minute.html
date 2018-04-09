@@ -1,0 +1,443 @@
+<html>
+
+<head>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+<script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>    
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>    
+<link href="https://vjs.zencdn.net/6.6.3/video-js.css" rel="stylesheet">
+<script src="https://vjs.zencdn.net/6.6.3/video.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-contrib-hls/5.12.2/videojs-contrib-hls.js"></script>
+
+<script>
+    s3_url = '.';
+    emp_url = [];
+    emp_url['Jumbo'] = 'https://cf98fa7b2ee4450e.mediapackage.us-east-1.amazonaws.com/out/v1/823c1984491b4d8ea2ad87f24c009dc1/index.m3u8';
+    emp_url['Action'] = 'https://cf98fa7b2ee4450e.mediapackage.us-east-1.amazonaws.com/out/v1/69bb701aff584614b33a4438f6dab690/index.m3u8';
+    emp_url['Robo'] = 'https://cf98fa7b2ee4450e.mediapackage.us-east-1.amazonaws.com/out/v1/96c8658f7b74436f98cddd5b2c11ec6a/index.m3u8';
+    emp_url['Goalie'] = 'https://547f72e6652371c3.mediapackage.us-east-1.amazonaws.com/out/v1/f1b5fe7a6f9441a09c5cf569cebd01d0/index.m3u8';
+    emp_url['Game'] = 'https://3ae97e9482b0d011.mediapackage.us-west-2.amazonaws.com/out/v1/94c2a64682db4ab7a52eeacdafe70210/index.m3u8';
+    emp_url['Fan'] = 'https://8343f7014c0ea438.mediapackage.us-west-2.amazonaws.com/out/v1/d7e240562e324a54a6b936fe1da845ea/index.m3u8';
+
+    watch_list = ['Game', 'Robo', 'Fan', 'live'];
+jQuery(function ($) {
+    $.fn.hScroll = function (amount) {
+        amount = amount || 120;
+        $(this).bind("DOMMouseScroll mousewheel", function (event) {
+            var oEvent = event.originalEvent, 
+                direction = oEvent.detail ? oEvent.detail * -amount : oEvent.wheelDelta, 
+                position = $(this).scrollLeft();
+            position += direction > 0 ? -amount : amount;
+            $(this).scrollLeft(position);
+            event.preventDefault();
+        })
+    };
+});
+    $( document ).ready(function() {
+        add_live();
+        update_list();
+        list_timer = setInterval(update_list, 10000);
+        $('#the_row').hScroll(20); // You can pass (optionally) scrolling amount
+    });
+    function add_live(){
+        // console.log('adding live');
+        $('#live').append(' <div class="col-xs-2" id="minute-live"></div>');
+        // TIMELINE
+        $('#minute-live').append('<div class="row" style="margin-top: 60px; margin-bottom: 30px"><div class="col-xs-12"><div class="timeline"></div> <div class="timedot" style="cursor: pointer;"></div><div class="sniptitle" style="cursor: pointer;">Live</div></div></div>');
+        $('#minute-live').append('<div class="row" ><div class="col-xs-12"><div class="panel panel-default"> <div class="panel-body" id="minute-live_body" > </div> </div></div> </div>');
+        // PLAYER
+        $('#minute-live_body').append(' <div id="player_live"></div>');
+        // $('#player_live').append('<div class="row"><div class="col-xs-12" id="carouseldiv_live" ></div></div><div class="row"><div class="col-xs-12" id="playerdiv_live"></div></div><div class="row"><div class="col-xs-12" id="playertextdiv_live" onClick="make_player(\'live\',\'live\',\'live\')"></div></div>');
+        $('#carouseldiv_live').append('<div class="item active" onClick="make_player(\'live\',\'live\',\'live\')"><img class="img-responsive" src="' + s3_url + '/slate.jpg" alt="..."><div class="carousel-caption"><div id="scene_rekog_slate"><span class="playicon" ></span></div></div></div>');
+        $('#carouseldiv_live').hide();
+        // Camera Angles 
+        this_div_id = 'live';
+        $('#minute-' + this_div_id + '_body').append('<div id="camera-' + this_div_id +'-group" class="btn-group btn-group-justified" role="group" aria-label="..."></div>');
+        for (var k in emp_url){
+            if (emp_url.hasOwnProperty(k)) {
+                $('#camera-' + this_div_id + '-group').append('<div onClick="make_player(\'live\',\'live\',\'live\', \'' + k + '\')" class="btn-group" role="group"><button id="camera-' + this_div_id +'-button-' + k + '" type="button" class="btn btn-default"><small style="margin-left: -5px">' + k + '</small></button></div>');
+            }
+        }
+        $('#minute-' + this_div_id + '_body').append('<div id="scoreboard-' + this_div_id +'"></div>');
+        // game clock and period
+        $('#scoreboard-' + this_div_id).append('<div class="row bg-primary"><div class="col-md-12 text-center">Live Scoreboard: </div></div><div class="row bg-primary"><div id="scoreboard-' + this_div_id +'-score_left" class="col-md-1 col-md-offset-2">0</div><div id="scoreboard-' + this_div_id +'-shots_left" class="col-md-1" style="position: relative; height: 20px;">0</div><div id="scoreboard-' + this_div_id +'-gameclock" class="col-md-2">00:00</div><div id="scoreboard-' + this_div_id +'-period" class="col-md-1"  style="position: relative; height: 20px;">0</div><div id="scoreboard-' + this_div_id +'-score_right" class="col-md-1">0</div><div id="scoreboard-' + this_div_id +'-shots_right" class="col-md-1"  style="position: relative;  height: 20px;">0</div></div>');
+        // timestamp
+        // $('#scoreboard-' + this_div_id).append('<div class="row"><div id="scoreboard-' + this_div_id +'-segment_datetime" class="col-md-12">0</div></div>');
+        $('#scoreboard-' + this_div_id).append('<div class="row"><div id="scoreboard-' + this_div_id +'-label_image" class="col-md-12" style="height 40px"></div></div>');
+
+
+        $('#minute-' + this_div_id + '_body').append('<div id="scoreboard-' + this_div_id +'-temp"></div>');
+
+        // PLAYER -- INNARDS
+        make_player('live', 'live', 'live', 'Action');
+    }
+    function between(x, min, max) {
+        return x >= min && x <= max;
+    }
+    // PLAYER -- INNARDS
+    active_player = 0;
+    next_camera = 'live';
+    active_button = 0;
+    attract_mode = 'true';
+    function make_player(this_div_id, emp_start, emp_end, camera='Action', reason=''){
+        if (active_player != 0){
+            if ($('#video_' + active_player).length){
+                // console.log("disposing of: " + active_player);            
+                var oldPlayer = document.getElementById('video_' + active_player);
+                videojs(oldPlayer).dispose();
+                $("#playerdiv").html('');
+                $('#camera-' + active_player +'-button-' + active_button).removeClass('active');
+                // $("#playertextdiv_" + active_player).replaceWith('<div class="col-xs-12" id="playertextdiv_' + active_player + '" onClick="make_player(\'live\',\'live\',\'live\')"><b><i>Play</i></b></div>');
+                // $('#carouseldiv_' + active_player).show();
+            }else{
+                // console.log(active_player + " did not exist");
+            }
+
+        }
+        next_camera = 'live';
+        if(this_div_id == 'live'){
+            // $('#carouseldiv_' + this_div_id).hide();
+            // $("#playerdiv_live").replaceWith('<div class="col-xs-12" id="playerdiv_live"><b><i>Live</i></b></div>');
+            // $("#player_live").prepend('<video id="video_live" class="video-js vjs-default-skin" style="width:100%;" controls><source src="' + emp_url + '" type="application/x-mpegURL"></video>');
+            // $("#playertextdiv_live").replaceWith('<div class="col-xs-12" id="playertextdiv_live" onClick="make_player(\'live\',\'live\',\'live\')"></div>');
+            $("#playerdiv").html('<video id="video_' + this_div_id + '" class="video-js vjs-default-skin" style="width:100%; padding-left: 15px; padding-right: 15px;" controls><source src="' + emp_url[camera] + '" type="application/x-mpegURL"></video>');
+                $("#playerdiv-head").html('<h4 class="text-center" style="color: #c3c3c3;">Live <small> [ ' +camera + ' ]</small></h4>');
+                $("#playerdiv-sub").html('<p class="text-center" style="color: #c3c3c3;">Live Feed</p>');
+            var player = videojs('video_' + this_div_id, { controls: true, muted: true, autoplay: true, preload: 'auto', fluid: true } );
+            active_player = this_div_id;
+            $('#camera-' + this_div_id +'-button-' + camera).addClass('active');
+            active_button = camera;
+
+            // console.log('active_player = ' + active_player);
+        }else{
+            for (i = 0; i < watch_list.length; ++i) {
+                if(watch_list[i] == camera ){
+                    next_camera = watch_list[i + 1];
+                }
+            }
+            // console.log("active player: " + camera + ", next player: " + next_camera );
+            // $('#carouseldiv_' + this_div_id).hide();
+            // $("#playertextdiv_" + this_div_id).replaceWith('<div class="col-xs-12" id="playertextdiv_' + this_div_id + '" onClick="make_player(\'live\',\'live\',\'live\')"><b>from <i>' + emp_start +  '</i> to <i>' + emp_end + '</i></b></div>');
+            $("#playerdiv").html('<video id="video_' + this_div_id + '" class="video-js vjs-default-skin" style="width:100%; padding-left: 15px; padding-right: 15px;" controls><source src="' + emp_url[camera] + '?start=' + emp_start + '&end=' + emp_end + '" type="application/x-mpegURL"></video>');
+                $("#playerdiv-head").html('<h4 class="text-center"  style="color: #c3c3c3;">'+ reason + '<small> [ ' + camera + ' ]</small></h4>');
+                $("#playerdiv-sub").html('<p class="text-center" style="color: #c3c3c3;"><b>from <i>' + emp_start +  '</i> to <i>' + emp_end + '</i></b></p>');
+            
+            var player = videojs('video_' + this_div_id, { controls: true, autoplay: true, preload: 'auto', fluid: true } );
+            player.on('ended', function() {
+                if(next_camera != 'live'){
+                    make_player(this_div_id, emp_start, emp_end, next_camera, reason);
+                }else{
+                    if(attract_mode == 'true'){
+                        make_player('live', 'live', 'live', 'Action');
+                    }
+                }
+            });
+            active_player = this_div_id;
+            $('#camera-' + this_div_id +'-button-' + camera).addClass('active');
+            active_button = camera;
+            
+            // console.log('active_player = ' + active_player);            
+        }
+        
+
+    }
+    run_first_time = 'false';
+    function add_minute(minute){
+        // console.log(minute);
+        play_highlight = 'false';
+        this_div_id = minute.entry_id.replace(" ", "-");
+        if ($('#minute-' + this_div_id).length == 0){
+            div_size = '2';
+            this_heading = 'Sports'
+            this_panel_type = 'default';            
+            if(minute.trigger_type == 'shot'){
+                this_panel_type = 'success';
+                div_size = '2';
+                this_heading = 'Shot';
+                if( minute.shot_object.payload['Team 1 Shot'] == 'true'){
+                    this_heading = 'Winterhawks Shot';
+                }
+                if( minute.shot_object.payload['Team 2 Shot'] == 'true'){
+                    this_heading = 'Thunderbirds Shot';
+                }
+                play_highlight = this_heading;
+            }
+            if(minute.trigger_type == 'score'){
+                this_panel_type = 'primary';
+                // div_size = '3';
+                this_heading = 'Score';
+                if( minute.shot_object.payload['Team 1 Goal'] == 'true'){
+                    this_heading = 'Winterhawks Goal';
+                }
+                if( minute.shot_object.payload['Team 2 Goal'] == 'true'){
+                    this_heading = 'Thunderbirds Goal';
+                }
+                play_highlight = this_heading;
+            }
+            
+            if(minute.trigger_type == 'period'){
+                this_panel_type = 'default';
+                div_size = '2';
+                this_heading = 'Period: ' + minute.shot_object.payload['period'];
+                // $('#minutes').prepend(' <div class="col-xs-' + div_size + '" id="minute-' + this_div_id + '"></div>');
+                // $('#minute-' + this_div_id ).hide();
+                // TIMELINE
+                // $('#minute-' + this_div_id ).append('<div class="row" style="margin-top: 60px; margin-bottom: 30px"><div class="col-xs-12"><div class="timeline"></div> <div class="timedot" style="cursor: pointer;"></div><div class="sniptitle" style="cursor: pointer;">' + minute.scoreboard.payload.clock +  '</div></div></div>');
+
+                // $('#minute-' + this_div_id ).append('<div class="row" ><div class="col-xs-12"><div class="panel panel-' + this_panel_type + '"> <div class="panel-heading">' + this_heading + '</div> <div class="panel-body" id="minute-' + this_div_id + '_body" > </div> </div></div> </div>');
+                minute.scoreboard.payload.clock = '*';
+
+            }
+
+            $('#minutes').prepend(' <div class="col-xs-' + div_size + ' fields" id="minute-' + this_div_id + '"></div>');
+            $('#minute-' + this_div_id ).hide();
+            // TIMELINE
+            $('#minute-' + this_div_id ).append('<div class="row" style="margin-top: 60px; margin-bottom: 30px"><div class="col-xs-12"><div class="timeline"></div> <div class="timedot" style="cursor: pointer;"></div><div class="sniptitle" style="cursor: pointer;">' + minute.scoreboard.payload.clock +  '</div></div></div>');
+
+            $('#minute-' + this_div_id ).append('<div class="row" ><div class="col-xs-12"><div class="panel panel-' + this_panel_type + '"> <div class="panel-heading text-center"><h4>' + this_heading + '<h4></div> <div class="panel-body" id="minute-' + this_div_id + '_body" > </div> </div></div> </div>');
+
+            // Camera Angles 
+            $('#minute-' + this_div_id + '_body').append('<span><b>Cameras: </b></span><div id="camera-' + this_div_id +'-group" class="btn-group btn-group-justified" role="group" aria-label="..."></div>');
+            for (var k in emp_url){
+                if (emp_url.hasOwnProperty(k)) {
+                    $('#camera-' + this_div_id + '-group').append('<div onClick="make_player(\'' + this_div_id + '\',\'' + minute.start_time +  '\',\'' + minute.end_time +  '\', \'' + k + '\', \'' + this_heading + '\')" class="btn-group" role="group"><button id="camera-' + this_div_id +'-button-' + k + '" type="button" class="btn btn-default"><small style="margin-left: -5px">' +k + '<small></button></div>');
+                }
+            }
+
+            // $('#camera-' + this_div_id + '-group').append('<div onClick="make_player(\'' + this_div_id + '\',\'' + minute.start_time +  '\',\'' + minute.end_time +  '\', \'1\')" class="btn-group" role="group"><button id="camera-' + this_div_id +'-button-1" type="button" class="btn btn-default">' + emp_name[1] + '</button></div>');
+            // $('#camera-' + this_div_id + '-group').append('<div onClick="make_player(\'' + this_div_id + '\',\'' + minute.start_time +  '\',\'' + minute.end_time +  '\', \'2\')" class="btn-group" role="group"><button id="camera-' + this_div_id +'-button-2" type="button" class="btn btn-default">' + emp_name[2] + '</button></div>');
+            // $('#camera-' + this_div_id + '-group').append('<div onClick="make_player(\'' + this_div_id + '\',\'' + minute.start_time +  '\',\'' + minute.end_time +  '\', \'3\')" class="btn-group" role="group"><button id="camera-' + this_div_id +'-button-3"type="button" class="btn btn-default">' + emp_name[3] + '</button></div>');
+            // $('#camera-' + this_div_id + '-group').append('<div onClick="make_player(\'' + this_div_id + '\',\'' + minute.start_time +  '\',\'' + minute.end_time +  '\', \'4\')" class="btn-group" role="group"><button id="camera-' + this_div_id +'-button-4" type="button" class="btn btn-default">' + emp_name[4] + '</button></div>');
+            $('#minute-' + this_div_id + '_body').append('<div id="scoreboard-' + this_div_id +'"></div>');
+            // game clock and period
+            $('#scoreboard-' + this_div_id).append('<div class="row bg-primary"><div class="col-md-12 text-center">Scoreboard: </div></div><div class="row bg-primary" style="font-size: 120%"><div id="scoreboard-' + this_div_id +'-score_left" class="col-md-1 col-md-offset-2">0</div><div id="scoreboard-' + this_div_id +'-shots_left" class="col-md-1" style="position: relative; height: 20px;">0</div><div id="scoreboard-' + this_div_id +'-gameclock" class="col-md-2">00:00</div><div id="scoreboard-' + this_div_id +'-period" class="col-md-1"  style="position: relative; height: 20px;">0</div><div id="scoreboard-' + this_div_id +'-score_right" class="col-md-1">0</div><div id="scoreboard-' + this_div_id +'-shots_right" class="col-md-1"  style="position: relative;  height: 20px;">0</div></div>');
+            $('#scoreboard-' + this_div_id +'-gameclock').html('<span>' + minute.dynamo_object.game_clock + '</span>');
+            $('#scoreboard-' + this_div_id +'-period').html('<span style="position: absolute; bottom: 0; font-size: 60%">' + minute.dynamo_object.game_period + '</span>');
+            $('#scoreboard-' + this_div_id +'-shots_left').html('<span style="position: absolute; bottom: 0; font-size: 60%">' + minute.dynamo_object.shots_left + '</span>');
+            $('#scoreboard-' + this_div_id +'-shots_right').html('<span style="position: absolute; bottom: 0; font-size: 60%">' + minute.dynamo_object.shots_right + '</span>');
+            $('#scoreboard-' + this_div_id +'-score_left').html('<span>' + minute.dynamo_object.score_left + '</span>');
+            $('#scoreboard-' + this_div_id +'-score_right').html('<span>' + minute.dynamo_object.score_right + '</span>');
+            // $('#scoreboard-' + this_div_id +'-segment_datetime').html('<span>' + minute.dynamo_object.segment_datetime + '</span>');
+
+            // SCOREBOARD
+            // $('#minute-' + this_div_id + '_body').append(' <div id="scoreboard_' + this_div_id + '"></div>');
+            // $('#scoreboard_' + this_div_id).append('<pre style="font-size: 60%">' + JSON.stringify(minute.dynamo_object,null, 2) + '</pre>');
+            // $('#scoreboard_' + this_div_id).append('<pre style="font-size: 60%">' + JSON.stringify(minute.shot_object,null, 2) + '</pre>');
+            // SCENES -- INNARDS 
+            // $('#player_' + this_div_id).append('<div class="row" ><div class="col-xs-12" id="carouseldiv_' + this_div_id + '" ></div></div><div class="row"><div class="col-xs-12" id="playerdiv_' + this_div_id + '"></div></div><div class="row"><div class="col-xs-12" id="playertextdiv_' + this_div_id + '" onClick="make_player(\'' + this_div_id + '\',\'' + minute.start_time +  '\',\'' + minute.end_time +  '\')"><b>from <i>' + minute.start_time +  '</i> to <i>' + minute.end_time + '</i></b></div></div>');
+            // $('#carouseldiv_' + this_div_id).append('<div id="carousel_' + this_div_id + '" class="carousel slide" ><ol id="carousel_indicators_' + this_div_id + '" class="carousel-indicators"></ol><div  onClick="make_player(\'' + this_div_id + '\',\'' + minute.start_time +  '\',\'' + minute.end_time +  '\')" id="carousel_listbox_' + this_div_id + '" class="carousel-inner" role="listbox"></div></div>');
+
+            // $('#carousel_listbox_' + this_div_id).append('<div class="item active"><img class="img-thumbnail" src="' + s3_url + '/images/' + minute.label_image + '" alt="..."><div class="carousel-caption"><div id="scene_rekog_slate"><span class="playicon" ></span></div></div></div>');
+            // images
+            $('#minute-' + this_div_id + '_body').append('<div class="row" style="height: 60px" ><div  class="col-xs-12"><img class="img-thumbnail" src="' + s3_url + '/images/' + minute.label_image + '" alt="..."></div></div>');
+
+            $('#minute-' + this_div_id ).show(1200);
+
+            if(play_highlight != 'false'){
+                if(run_first_time == 'true'){
+                    make_player(this_div_id, minute.start_time, minute.end_time, watch_list[0], play_highlight);
+                }
+            }   
+
+        }else{
+            // console.log('already exists skipping: ' + this_div_id);
+        }
+        
+    }
+    function update_list() {
+        count = 0;
+        $.getJSON("list-vod.json?random=" + Math.random(), function(json) {
+            json_reversed = json.slice(0).reverse();
+            $.each(json_reversed, function( ) {
+                        add_minute(this);
+                        // console.log(this);
+            });
+        })  
+        .done(function(data) {
+            $("#please_wait").remove();
+            // add_live();
+            run_first_time = 'true';
+        this_div_id = 'live';
+        $.getJSON("scoreboard.json?random=" + Math.random(), function(json) {
+            // $('#scoreboard-' + this_div_id + '-temp').html('<pre style="font-size: 60%">' + JSON.stringify(json,null, 2) + '</pre>');
+            $('#scoreboard-' + this_div_id +'-gameclock').html('<span>' + json.game_clock + '</span>');
+            $('#scoreboard-' + this_div_id +'-period').html('<span style="position: absolute; bottom: 0; font-size: 60%">' + json.game_period + '</span>');
+            $('#scoreboard-' + this_div_id +'-shots_left').html('<span style="position: absolute; bottom: 0; font-size: 60%">' + json.shots_left + '</span>');
+            $('#scoreboard-' + this_div_id +'-shots_right').html('<span style="position: absolute; bottom: 0; font-size: 60%">' + json.shots_right + '</span>');
+            $('#scoreboard-' + this_div_id +'-score_left').html('<span>' + json.score_left + '</span>');
+            $('#scoreboard-' + this_div_id +'-score_right').html('<span>' + json.score_right + '</span>');
+            // $('#scoreboard-' + this_div_id +'-segment_datetime').html('<span>' + json.segment_datetime + '</span>');
+            $('#scoreboard-' + this_div_id +'-label_image').html('<img src="' + s3_url + '/images/' + json.label_image + '" class="img-thumbnail">');
+        });          
+        $('div.fields:gt(20)').each(function (index, elt){}).remove();  
+    });
+
+
+    }
+    var start_or_end = 'start';
+    function setInOut(start_time,end_time){
+        this_blah = start_or_end;
+        if( this_blah === 'start'){
+            $('#start_time').val(start_time);
+            start_or_end = 'end';
+        }
+        if( this_blah === 'end'){
+            $('#end_time').val(end_time);
+            start_or_end = 'start';
+        }
+
+    }  
+</script>
+<style>
+body{
+        background-color: #555;
+}
+        /* The heart of the matter */
+#the_row {
+    overflow-x: auto;
+    white-space: nowrap;
+}
+#minutes > .col-xs-1, 
+#minutes > .col-xs-2, 
+#minutes > .col-xs-3, 
+#minutes > .col-xs-4, 
+#minutes > .col-xs-5 {
+    display: inline-block;
+    white-space: normal;
+    float: none;
+}
+::-webkit-scrollbar {
+        -webkit-appearance: none;
+        width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+        border-radius: 5px;
+        background-color: rgba(0,0,0,.5);
+        -webkit-box-shadow: 0 0 1px rgba(255,255,255,.5);
+        box-shadow: 0 0 1px rgba(255,255,255,.5);
+    }
+.timeline {
+    position: absolute;
+    z-index: 1;
+    top: -5.5px;    
+    left: 0;
+    right: -15px;
+    height: 5px;
+    border-top: 5px solid #6f6f6f;
+}
+.timedot {
+    left: 0;
+    right: 0;
+    background: transparent center 0 no-repeat url(timedot.png);
+    position: absolute !important;
+    z-index: 2;
+    height: 13px;
+    text-align: center;
+    top: -9px !important;    
+}
+.sniptitle {
+    -webkit-transition: left 1s ease;
+    -moz-transition: left 1s ease;
+    -o-transition: left 1s ease;
+    transition: left 1s ease;
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    z-index: 2;
+    line-height: 1;
+    color: #c3c3c3;
+    padding: 0 15px 0 10px;
+    font-size: 24px;
+    height: 30px;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    -ms-transform: rotate(-45deg);
+    -webkit-transform: rotate(-45deg);
+    -moz-transform: rotate(-45deg);
+    -o-transform: rotate(-45deg);
+    transform: rotate(-45deg);
+    -ms-transform-origin: 5px 5px;
+    -webkit-transform-origin: 5px 5px;
+    -moz-transform-origin: 5px 5px;
+    -o-transform-origin: 5px 5px;
+    transform-origin: 5px 5px;
+}
+.playicon {
+            content: '';
+            background-image: url(web_icon_play.svg);
+            background-repeat: no-repeat;
+            height: 120px;
+            /* width: 120px; */
+            /* text-align: center; */
+            margin: auto;
+            /* background-position: 0 15px; */
+            /* background-color: #000; */
+            border-radius: 100%;
+            height: 120px;
+            width: 120px;
+            top: -30%;
+            transform: translateY(-50%);
+            position: absolute;
+            left: 0;
+            right: 0;
+            content: '';
+            background-repeat: no-repeat;
+            height: 120px;
+            width: 120px;
+            text-align: center;
+            display: block;
+            margin: auto;
+            background-color: #000;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 100%;
+        }
+        .services-area{
+            height: 400px;
+            overflow: scroll;
+        }
+        .EVENT { background-color: #1f77b4; }
+        .ORGANIZATION { background-color: #ff7f0e; }
+        .DATE { background-color: #ad494a; }
+        .LOCATION { background-color: #d500f9; }
+        .PERSON { background-color: #dff0d8; color: #3c763d;}
+        .COMMERCIAL_ITEM { background-color: #d9edf7; color: #3c763d;}
+        .QUANTITY { background-color: #f2dede; color: #3c763d;}
+        .key_phrases { background-color: #d9edf7; color: #31708f;}
+        
+</style>
+</head>
+<body>
+          
+              <div class="container-fluid scrolling-group">
+                                  
+                <div class="row" id="the_row" >
+                    <div id="live" ></div>
+                    <div id="minutes" >
+                            <div class="col-xs-2" id="please_wait" >
+                                    <div class="row" style="margin-top: 60px; margin-bottom: 30px"><div class="col-xs-12"><div class="timeline"></div> <div class="timedot" style="cursor: pointer;"></div><div class="sniptitle" style="cursor: pointer;">loading</div></div></div>
+                                    <div class="row" ><div class="col-xs-12"><div class="panel panel-default"> <div class="panel-body" id="minute-wait_body" > <img style="width: 200px; height: 150px" src="loading.gif" /></div> </div></div> </div>
+                            </div>
+                    </div>
+                </div>
+                </div>
+                <div class="container">
+                        <div class="row" ><div id="playerdiv-head" class="col-xs-12 "></div></div>
+                        <div class="row" id="player_row" ><div id="playerdiv" class="col-xs-8 col-xs-offset-2"></div></div>
+                    <div class="row" ><div id="playerdiv-sub" class="col-xs-12 "></div></div>
+                </div>
+                
+                <div class="container-fluid"></div>
+                <hr>
+          
+                <footer>
+                  <p>&pi;</p>
+                </footer>
+              </div> <!-- /container -->
+</body>
+</html>

@@ -1,1 +1,0 @@
-awslogs get /aws/lambda/catfinder5001-vod ALL --watch

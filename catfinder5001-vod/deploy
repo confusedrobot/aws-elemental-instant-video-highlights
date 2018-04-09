@@ -1,1 +1,0 @@
-lambda-uploader --variables '{"EMC_ROLE": "arn:aws:iam::463540299421:role/vod-MediaConvertIAMRole-1BIVDOODMZT1L-MediaConvertRole","EMC_ENDPOINT": "https://vweb51sm.mediaconvert.us-west-2.amazonaws.com","DYNAMO_LIST": "catfinder5000-list" }'

@@ -1,0 +1,15 @@
+{
+    "name": "catfinder5001-vod",
+    "description": "catfinder5001-vod",
+    "region": "us-west-2",
+    "handler": "lambda_function.lambda_handler",
+    "role": "arn:aws:iam::463540299421:role/lambda_full_access",
+    "requirements": ["boto3","aws_xray_sdk"],
+    "ignore": [
+        "circle\\.yml$",
+        "\\.git$",
+        "/.*\\.pyc$"
+    ],
+    "timeout": 240,
+    "memory": 256
+}

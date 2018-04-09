@@ -1,1 +1,0 @@
-lambda-uploader --variables '{"CHANNEL_NAME": "catfinder5001___","LAMBDA_VOD": "catfinder5001-vod","DYNAMO_MAIN": "catfinder5000-main","S3_BUCKET": "catfinder5000-demo" }'

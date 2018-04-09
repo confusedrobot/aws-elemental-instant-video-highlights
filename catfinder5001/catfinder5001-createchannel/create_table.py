@@ -182,14 +182,14 @@ def check_autscaler(table_name):
 
 if __name__ == '__main__':
     # create main table
-    create_table_main('nab2018-catfinder5003-main')
-    # add_autoscaler('nab2018-catfinder5003-main')
-    # check_autscaler('nab2018-catfinder5003-main')
+    create_table_main('nab2018-catfinder5001-main')
+    # add_autoscaler('nab2018-catfinder5001-main')
+    # check_autscaler('nab2018-catfinder5001-main')
     # create summary table
-    create_table_summary('nab2018-catfinder5003-summary')
-    # add_autoscaler('nab2018-catfinder5003-summary')
-    # check_autscaler('nab2018-catfinder5003-summary')    
+    create_table_summary('nab2018-catfinder5001-summary')
+    # add_autoscaler('nab2018-catfinder5001-summary')
+    # check_autscaler('nab2018-catfinder5001-summary')    
     # create list table
-    create_table_list('nab2018-catfinder5003-list')
-    # add_autoscaler('nab2018-catfinder5003-list')
-    # check_autscaler('nab2018-catfinder5003-list')        
+    create_table_list('nab2018-catfinder5001-list')
+    # add_autoscaler('nab2018-catfinder5001-list')
+    # check_autscaler('nab2018-catfinder5001-list')        

@@ -40,8 +40,8 @@ import botocore
 ## LOOK Here!!! you will need to change this
 # MEDIALIVE_ARN = 'arn:aws:iam::1234567890:role/AllowMediaLiveAccessRole' # leah 
 MEDIALIVE_ARN = 'arn:aws:iam::1234567890:role/MediaLiveAccessRole' # techmkt
-S3_BUCKET = 'nab2018-catfinder5004'
-CHANNEL_NAME = 'nab2018-catfinder5004'
+S3_BUCKET = 'nab2018-catfinder5001'
+CHANNEL_NAME = 'nab2018-catfinder5001'
 REGION = 'us-east-1'
 session = boto3.Session(
     # profile_name='ibc'
@@ -234,7 +234,7 @@ def create_a_channel(input_id, channel_name, destinations, s3_bucket):
         InputAttachments = [{
             'InputId': input_id,
             'InputSettings': {
-                # "SourceEndBehavior": "LOOP",
+                "SourceEndBehavior": "LOOP",
                 'NetworkInputSettings': {
                 }
              }
@@ -264,7 +264,7 @@ def create_a_channel(input_id, channel_name, destinations, s3_bucket):
                     "PasswordParam": ""
                 }, 
                 {
-                    "Url": "s3://dev-null-us-east-1/backup-live/backup", 
+                    "Url": "s3://" + s3_bucket + "/live-backup/backup", 
                     "Username": "", 
                     "PasswordParam": ""
                 }
@@ -284,16 +284,16 @@ def create_a_channel(input_id, channel_name, destinations, s3_bucket):
                             "DestinationRefId": "destination1"
                         }, 
                         "IvSource": "FOLLOWS_SEGMENT_NUMBER", 
-                        "IndexNSegments": 7, 
+                        "IndexNSegments": 6, 
                         "InputLossAction": "EMIT_OUTPUT", 
-                        "ManifestDurationFormat": "FLOATING_POINT", 
+                        "ManifestDurationFormat": "INTEGER", 
                         "CodecSpecification": "RFC_4281", 
                         "IvInManifest": "INCLUDE", 
-                        "TimedMetadataId3Period": 2, 
-                        "ProgramDateTimePeriod": 2, 
+                        "TimedMetadataId3Period": 10, 
+                        "ProgramDateTimePeriod": 600, 
                         "SegmentLength": 2, 
                         "CaptionLanguageSetting": "OMIT", 
-                        "ProgramDateTime": "INCLUDE", 
+                        "ProgramDateTime": "EXCLUDE", 
                         "HlsCdnSettings": {
                             "HlsWebdavSettings": {
                                 "NumRetries": 10, 
@@ -451,9 +451,9 @@ def create_a_channel(input_id, channel_name, destinations, s3_bucket):
                         "ManifestDurationFormat": "FLOATING_POINT", 
                         "CodecSpecification": "RFC_4281", 
                         "IvInManifest": "INCLUDE", 
-                        "TimedMetadataId3Period": 1, 
-                        "ProgramDateTimePeriod": 1, 
-                        "SegmentLength": 1, 
+                        "TimedMetadataId3Period": 10, 
+                        "ProgramDateTimePeriod": 10, 
+                        "SegmentLength": 10, 
                         "CaptionLanguageSetting": "OMIT", 
                         "ProgramDateTime": "INCLUDE", 
                         "Mode": "LIVE", 
@@ -515,7 +515,7 @@ def create_a_channel(input_id, channel_name, destinations, s3_bucket):
                 "CodecSettings": {
                     "H264Settings": {
                         "Syntax": "DEFAULT", 
-                        "FramerateNumerator": 30, 
+                        "FramerateNumerator": 30000, 
                         "Profile": "HIGH", 
                         "GopSize": 2, 
                         "AfdSignaling": "NONE", 
@@ -523,8 +523,8 @@ def create_a_channel(input_id, channel_name, destinations, s3_bucket):
                         "ColorMetadata": "INSERT", 
                         "FlickerAq": "ENABLED", 
                         "LookAheadRateControl": "HIGH", 
-                        "FramerateDenominator": 1, 
-                        "Bitrate": 6000000, 
+                        "FramerateDenominator": 1001, 
+                        "Bitrate": 5000000, 
                         "TimecodeInsertion": "PIC_TIMING_SEI", 
                         "NumRefFrames": 3, 
                         "EntropyEncoding": "CABAC", 
@@ -554,7 +554,7 @@ def create_a_channel(input_id, channel_name, destinations, s3_bucket):
                 "CodecSettings": {
                     "H264Settings": {
                         "Syntax": "DEFAULT", 
-                        "FramerateNumerator": 30, 
+                        "FramerateNumerator": 30000, 
                         "Profile": "HIGH", 
                         "GopSize": 2, 
                         "AfdSignaling": "NONE", 
@@ -562,8 +562,8 @@ def create_a_channel(input_id, channel_name, destinations, s3_bucket):
                         "ColorMetadata": "INSERT", 
                         "FlickerAq": "ENABLED", 
                         "LookAheadRateControl": "HIGH", 
-                        "FramerateDenominator": 1, 
-                        "Bitrate": 3500000, 
+                        "FramerateDenominator": 1001, 
+                        "Bitrate": 3000000, 
                         "TimecodeInsertion": "PIC_TIMING_SEI", 
                         "NumRefFrames": 3, 
                         "EntropyEncoding": "CABAC", 
@@ -593,7 +593,7 @@ def create_a_channel(input_id, channel_name, destinations, s3_bucket):
                 "CodecSettings": {
                     "H264Settings": {
                         "Syntax": "DEFAULT", 
-                        "FramerateNumerator": 30, 
+                        "FramerateNumerator": 30000, 
                         "Profile": "MAIN", 
                         "GopSize": 2, 
                         "AfdSignaling": "NONE", 
@@ -601,8 +601,8 @@ def create_a_channel(input_id, channel_name, destinations, s3_bucket):
                         "ColorMetadata": "INSERT", 
                         "FlickerAq": "ENABLED", 
                         "LookAheadRateControl": "HIGH", 
-                        "FramerateDenominator": 1, 
-                        "Bitrate": 2000000, 
+                        "FramerateDenominator": 1001, 
+                        "Bitrate": 1500000, 
                         "TimecodeInsertion": "PIC_TIMING_SEI", 
                         "NumRefFrames": 3, 
                         "EntropyEncoding": "CABAC", 
@@ -632,7 +632,7 @@ def create_a_channel(input_id, channel_name, destinations, s3_bucket):
                 "CodecSettings": {
                     "H264Settings": {
                         "Syntax": "DEFAULT", 
-                        "FramerateNumerator": 30, 
+                        "FramerateNumerator": 30000, 
                         "Profile": "MAIN", 
                         "GopSize": 2, 
                         "AfdSignaling": "NONE", 
@@ -640,8 +640,8 @@ def create_a_channel(input_id, channel_name, destinations, s3_bucket):
                         "ColorMetadata": "INSERT", 
                         "FlickerAq": "ENABLED", 
                         "LookAheadRateControl": "HIGH", 
-                        "FramerateDenominator": 1, 
-                        "Bitrate": 850000, 
+                        "FramerateDenominator": 1001, 
+                        "Bitrate": 750000, 
                         "TimecodeInsertion": "PIC_TIMING_SEI", 
                         "NumRefFrames": 3, 
                         "EntropyEncoding": "CABAC", 
@@ -672,11 +672,11 @@ def create_a_channel(input_id, channel_name, destinations, s3_bucket):
                     "H264Settings": {
                         "Syntax": "DEFAULT", 
                         "Profile": "MAIN", 
-                        "GopSize": 1, 
+                        "GopSize": 2, 
                         "AfdSignaling": "NONE", 
                         "FramerateControl": "SPECIFIED", 
-                        "FramerateNumerator": 30, 
-                        "FramerateDenominator": 1,
+                        "FramerateNumerator": 30000, 
+                        "FramerateDenominator": 1001,
                         "ColorMetadata": "INSERT", 
                         "FlickerAq": "ENABLED", 
                         "LookAheadRateControl": "MEDIUM", 
@@ -1068,7 +1068,7 @@ if __name__ == '__main__':
         input_name = CHANNEL_NAME
         #if input type is not provided at all or  HLS , then create a new input        
         if not args['--input-type'] or args['--input-type']=='HLS':
-            hls_source = 'https://techmkt-videoarchive.s3.amazonaws.com/1080p30/rosecity_parade_pasadena/stream.m3u8'
+            hls_source = 'https://techmkt-videoarchive.s3.amazonaws.com/1080p30/adkitten/stream.m3u8'
             if not args['--HLS-source']:
                 print('HLS source not given... using canned content')
             else:

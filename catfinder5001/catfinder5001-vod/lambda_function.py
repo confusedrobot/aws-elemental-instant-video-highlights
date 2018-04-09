@@ -190,7 +190,7 @@ def lambda_handler(event, context):
 
 
         ## MediaConvert 
-        # mediaConvertRole = "arn:aws:iam::463540299421:role/vod-MediaConvertIAMRole-1BIVDOODMZT1L-MediaConvertRole"
+        # mediaConvertRole = "arn:aws:iam::1234567890:role/vod-MediaConvertIAMRole-1BIVDOODMZT1L-MediaConvertRole"
         # mediaConvertEndpoint = "https://vweb51sm.mediaconvert.us-west-2.amazonaws.com"
         time_start = str(event['time_start'].split(' ')[1]) + ":" + event['time_start_frame'].zfill(2)
         time_end =  str(event['time_end'].split(' ')[1]) + ":" + event['time_end_frame'].zfill(2)
@@ -329,7 +329,7 @@ def lambda_handler(event, context):
 if __name__ == "__main__":
     XRAY = 'false'
     os.environ['DYNAMO_LIST'] = 'catfinder5000-list'
-    os.environ['EMC_ROLE'] = "arn:aws:iam::463540299421:role/vod-MediaConvertIAMRole-1BIVDOODMZT1L-MediaConvertRole"
+    os.environ['EMC_ROLE'] = "arn:aws:iam::1234567890:role/vod-MediaConvertIAMRole-1BIVDOODMZT1L-MediaConvertRole"
     os.environ['EMC_ENDPOINT'] = "https://vweb51sm.mediaconvert.us-west-2.amazonaws.com"
     os.environ['S3_BUCKET'] = 'catfinder5000-demo'
     get_environment_variables()
@@ -356,19 +356,19 @@ if __name__ == "__main__":
 
     ### SNS from MediaConvert
     event_sns = {
-        u'account': u'463540299421', 
+        u'account': u'1234567890', 
         u'region': u'us-west-2', 
         u'detail': {
             u'status': u'COMPLETE-TEST', 
             u'outputGroupDetails': [ {u'outputDetails': [ {u'durationInMs': 53500, u'videoDetails': {u'widthInPx': 1280, u'heightInPx': 720 } } ] } ], 
-            u'timestamp': 1515538854811, u'jobId': u'1515538821949-ml5i0q', u'queue': u'arn:aws:mediaconvert:us-west-2: 463540299421:queues/Default', 
+            u'timestamp': 1515538854811, u'jobId': u'1515538821949-ml5i0q', u'queue': u'arn:aws:mediaconvert:us-west-2: 1234567890:queues/Default', 
             u'userMetadata': {
                 u'label_sort': u'15209153721e0a850c-70ba-4ebb-9a06-30301ad0b49a', 
                 u'label': u'Cat'
             }, 
-            u'accountId': u'463540299421' 
+            u'accountId': u'1234567890' 
         }, 
-        u'detail-type': u'MediaConvert Job State Change', u'source': u'aws.mediaconvert', u'version': u'0', u'time': u'2018-01-09T23: 00: 54Z', u'id': u'bd543d7e-0325-76a7-060b-0ee13a931c28', u'resources': [u'arn:aws:mediaconvert:us-west-2: 463540299421:jobs/1515538821949-ml5i0q' ]
+        u'detail-type': u'MediaConvert Job State Change', u'source': u'aws.mediaconvert', u'version': u'0', u'time': u'2018-01-09T23: 00: 54Z', u'id': u'bd543d7e-0325-76a7-060b-0ee13a931c28', u'resources': [u'arn:aws:mediaconvert:us-west-2: 1234567890:jobs/1515538821949-ml5i0q' ]
     }
 
     print(lambda_handler(event,None))

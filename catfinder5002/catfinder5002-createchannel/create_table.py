@@ -145,7 +145,7 @@ def add_autoscaler(table_name):
         ScalableDimension='dynamodb:table:WriteCapacityUnits',
         MinCapacity=5,
         MaxCapacity=100,
-        RoleARN='arn:aws:iam::463540299421:role/service-role/DynamoDBAutoscaleRole'
+        RoleARN='arn:aws:iam::1234567890:role/service-role/DynamoDBAutoscaleRole'
     )
     pprint(response)
     response = autoscaling.register_scalable_target(
@@ -154,7 +154,7 @@ def add_autoscaler(table_name):
         ScalableDimension='dynamodb:table:ReadCapacityUnits',
         MinCapacity=5,
         MaxCapacity=100,
-        RoleARN='arn:aws:iam::463540299421:role/service-role/DynamoDBAutoscaleRole'
+        RoleARN='arn:aws:iam::1234567890:role/service-role/DynamoDBAutoscaleRole'
     )
     pprint(response)
 def check_autscaler(table_name):

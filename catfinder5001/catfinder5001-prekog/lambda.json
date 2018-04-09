@@ -3,7 +3,7 @@
     "description": "catfinder5001-prekog",
     "region": "us-west-2",
     "handler": "lambda_function.lambda_handler",
-    "role": "arn:aws:iam::463540299421:role/lambda_full_access",
+    "role": "arn:aws:iam::1234567890:role/lambda_full_access",
     "requirements": ["boto3","aws_xray_sdk"],
     "ignore": [
         "circle\\.yml$",

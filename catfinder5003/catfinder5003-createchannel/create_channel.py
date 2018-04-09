@@ -38,8 +38,8 @@ from pprint import pprint
 import botocore
 
 ## LOOK Here!!! you will need to change this
-# MEDIALIVE_ARN = 'arn:aws:iam::463540299421:role/AllowMediaLiveAccessRole' # leah 
-MEDIALIVE_ARN = 'arn:aws:iam::658937807431:role/MediaLiveAccessRole' # techmkt
+# MEDIALIVE_ARN = 'arn:aws:iam::1234567890:role/AllowMediaLiveAccessRole' # leah 
+MEDIALIVE_ARN = 'arn:aws:iam::1234567890:role/MediaLiveAccessRole' # techmkt
 S3_BUCKET = 'nab2018-catfinder5003'
 CHANNEL_NAME = 'nab2018-catfinder5003'
 REGION = 'us-east-1'

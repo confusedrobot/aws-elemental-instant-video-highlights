@@ -1,0 +1,433 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "This template creates the resources needed to run MediaConvert on the asset matching the label being searched for",
+    "Metadata": {
+        "AWS::CloudFormation::Designer": {
+            "0e9accc2-6461-4a91-a657-3e4e3276df3a": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 80,
+                    "y": 130
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "c4705047-3c68-4852-834d-738a0f5a05d5": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": -30,
+                    "y": 130
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "0ce69b52-93af-4b17-81a0-4b93564aa2d5": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 80,
+                    "y": 260
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "22e331a5-1e15-4968-be88-3f63d9ba5706": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": -150,
+                    "y": 130
+                },
+                "z": 0,
+                "embeds": [],
+                "isassociatedwith": [
+                    "36ca2af5-e498-41b5-b025-6a6ed8e7e2eb",
+                    "c4705047-3c68-4852-834d-738a0f5a05d5"
+                ]
+            },
+            "323403fd-302d-4ed8-b341-68cb494521a2": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 80,
+                    "y": 380
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "17ff20b0-e4d4-4c79-a915-9f3a34118d06": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 220,
+                    "y": 260
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "7b88325f-fcba-432d-83e0-fa1a3e2d46f7": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 330,
+                    "y": 260
+                },
+                "z": 0,
+                "embeds": [],
+                "isassociatedwith": [
+                    "0ce69b52-93af-4b17-81a0-4b93564aa2d5"
+                ]
+            }
+        }
+    },
+    "Resources": {
+        "PrekogLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Code": {
+                    "S3Bucket": {
+                        "Fn::Join": [
+                            "-",
+                            [
+                                "rodeolabz",
+                                {
+                                    "Ref": "AWS::Region"
+                                }
+                            ]
+                        ]
+                    },
+                    "S3Key": "cf5k/cf5k_resources.zip"
+                },
+                "Environment": {
+                    "Variables": {
+                        "EMP_URL": {
+                            "Ref": "MediaPackageEndpointURL"
+                        },
+                        "S3_BUCKET": {
+                            "Ref": "S3Bucket"
+                        },
+                        "LAMBDA_VOD": {
+                            "Ref": "VODLambda"
+                        },
+                        "DYNAMO_MAIN": {
+                            "Ref": "MainTable"
+                        },
+                        "DYNAMO_SUMMARY": {
+                            "Ref": "SummaryTable"
+                        },
+                        "DYNAMO_LIST": {
+                            "Ref": "ListTable"
+                        }
+                    }
+                },
+                "Handler": "prekog.lambda_handler",
+                "MemorySize": 512,
+                "Role": {
+                    "Fn::GetAtt": [
+                        "PrekogVODLambdaRole",
+                        "Arn"
+                    ]
+                },
+                "Runtime": "python2.7",
+                "Timeout": 300
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "0e9accc2-6461-4a91-a657-3e4e3276df3a"
+                }
+            }
+        },
+        "VODMediaConvertPolicy": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "mediaconvert:*"
+                            ],
+                            "Resource": "*"
+                        }
+                    ]
+                },
+                "PolicyName": "VODEMCPolicy",
+                "Roles": [
+                    {
+                        "Ref": "PrekogVODLambdaRole"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "22e331a5-1e15-4968-be88-3f63d9ba5706"
+                }
+            }
+        },
+        "PrekogVODLambdaRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/AdministratorAccess",
+                    "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess",
+                    "arn:aws:iam::aws:policy/AWSLambdaFullAccess",
+                    "arn:aws:iam::aws:policy/AmazonS3FullAccess",
+                    "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess",
+                    "arn:aws:iam::aws:policy/AmazonRekognitionFullAccess"
+                ],
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "lambda.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "c4705047-3c68-4852-834d-738a0f5a05d5"
+                }
+            }
+        },
+        "VODLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Code": {
+                    "S3Bucket": {
+                        "Fn::Join": [
+                            "-",
+                            [
+                                "rodeolabz",
+                                {
+                                    "Ref": "AWS::Region"
+                                }
+                            ]
+                        ]
+                    },
+                    "S3Key": "cf5k/cf5k_resources.zip"
+                },
+                "Environment": {
+                    "Variables": {
+                        "EMP_URL": {
+                            "Ref": "MediaPackageEndpointURL"
+                        },
+                        "S3_BUCKET": {
+                            "Ref": "S3Bucket"
+                        },
+                        "EMC_ROLE": {
+                            "Fn::GetAtt": [
+                                "MediaConvertRole",
+                                "Arn"
+                            ]
+                        },
+                        "DYNAMO_LIST": {
+                            "Ref": "ListTable"
+                        }
+                    }
+                },
+                "Handler": "vod.lambda_handler",
+                "MemorySize": 512,
+                "Role": {
+                    "Fn::GetAtt": [
+                        "PrekogVODLambdaRole",
+                        "Arn"
+                    ]
+                },
+                "Runtime": "python2.7",
+                "Timeout": 300
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "0ce69b52-93af-4b17-81a0-4b93564aa2d5"
+                }
+            }
+        },
+        "MediaConvertRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "mediaconvert.amazonaws.com",
+                                    "mediaconvert.us-east-1.amazonaws.com",
+                                    "mediaconvert.ap-northeast-1.amazonaws.com",
+                                    "mediaconvert.ap-southeast-1.amazonaws.com",
+                                    "mediaconvert.ap-southeast-2.amazonaws.com",
+                                    "mediaconvert.eu-central-1.amazonaws.com",
+                                    "mediaconvert.eu-west-1.amazonaws.com",
+                                    "mediaconvert.us-east-1.amazonaws.com",
+                                    "mediaconvert.us-west-1.amazonaws.com",
+                                    "mediaconvert.us-west-2.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Policies": [
+                    {
+                        "PolicyName": {
+                            "Fn::Sub": "${AWS::StackName}-MediaConvertPolicy"
+                        },
+                        "PolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "s3:*"
+                                    ],
+                                    "Resource": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "autoscaling:Describe*",
+                                        "cloudwatch:*",
+                                        "logs:*",
+                                        "sns:*"
+                                    ],
+                                    "Resource": [
+                                        "*"
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "323403fd-302d-4ed8-b341-68cb494521a2"
+                }
+            }
+        },
+        "EMCEventRule": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+                "Description": "CloudWatch event rule for MediaConvert job status change",
+                "EventPattern": {
+                    "source": [
+                        "aws.mediaconvert"
+                    ],
+                    "detail-type": [
+                        "MediaConvert Job State Change"
+                    ],
+                    "detail": {
+                        "status": [
+                            "COMPLETE"
+                        ]
+                    }
+                },
+                "State": "ENABLED",
+                "Targets": [
+                    {
+                        "Arn": {
+                            "Fn::GetAtt": [
+                                "VODLambda",
+                                "Arn"
+                            ]
+                        },
+                        "Id": "VODLambdaTargetFunction"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "17ff20b0-e4d4-4c79-a915-9f3a34118d06"
+                }
+            }
+        },
+        "EventInvokeLambda": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+                "FunctionName": {
+                    "Ref": "VODLambda"
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "events.amazonaws.com",
+                "SourceArn": {
+                    "Fn::GetAtt": [
+                        "EMCEventRule",
+                        "Arn"
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "7b88325f-fcba-432d-83e0-fa1a3e2d46f7"
+                }
+            }
+        }
+    },
+    "Parameters": {
+        "MediaPackageEndpointURL": {
+            "Description": "MediaPackage Endpoint URL",
+            "Type": "String"
+        },
+        "S3Bucket": {
+            "Description": "Bucket where MediaLive output is being written to",
+            "Type": "String"
+        },
+        "MainTable": {
+            "Description": "Main Table",
+            "Type": "String"
+        },
+        "SummaryTable": {
+            "Description": "Summary Table",
+            "Type": "String"
+        },
+        "ListTable": {
+            "Description": "List Table",
+            "Type": "String"
+        }
+    },
+    "Outputs": {
+        "PrekogLambda": {
+            "Value": {
+                "Ref": "PrekogLambda"
+            },
+            "Description": "Prekog Lambda Name"
+        },
+        "VODLambda": {
+            "Value": {
+                "Ref": "VODLambda"
+            },
+            "Description": "VOD Lambda Name"
+        }
+    }
+}

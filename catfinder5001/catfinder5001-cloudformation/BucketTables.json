@@ -1,0 +1,517 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "This template creates the S3 bucket and DynamoDB tables",
+    "Metadata": {
+        "AWS::CloudFormation::Designer": {
+            "1187410e-186b-4831-bf01-ebee21ce7309": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 200,
+                    "y": 70
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "46250c59-23d1-43ea-ad6d-822c84ff668a": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 310,
+                    "y": 70
+                },
+                "z": 0,
+                "embeds": [],
+                "isassociatedwith": [
+                    "1187410e-186b-4831-bf01-ebee21ce7309"
+                ]
+            },
+            "6050e87c-2743-4047-bfcd-c8902673d95d": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 400,
+                    "y": 70
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "120d4ea2-ea63-4bef-815d-dd2c766a772c": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 500,
+                    "y": 70
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "f5344b03-cc54-4286-a74c-9db67025bc82": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 600,
+                    "y": 70
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "a8b2a1f8-27e9-4beb-878a-df0b7d628296": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 200,
+                    "y": 170
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "e644b37e-bfce-4033-bb9a-b24f73805ad4": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 310,
+                    "y": 170
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "cc42d6b4-bbbb-4d2c-8a5b-97856d98ea9e": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 410,
+                    "y": 170
+                },
+                "z": 0,
+                "embeds": []
+            }
+        }
+    },
+    "Resources": {
+        "ParseBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "WebsiteConfiguration": {
+                    "IndexDocument": "index.html",
+                    "ErrorDocument": "error.html"
+                },
+                "AccessControl": "PublicRead",
+                "VersioningConfiguration": {
+                    "Status": "Suspended"
+                },
+                "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "Id": "ImagesRule",
+                            "Prefix": "images/",
+                            "Status": "Enabled",
+                            "ExpirationInDays": "1",
+                            "NoncurrentVersionExpirationInDays": "1"
+                        },
+                        {
+                            "Id": "AudioRule",
+                            "Prefix": "audio/",
+                            "Status": "Enabled",
+                            "ExpirationInDays": "1",
+                            "NoncurrentVersionExpirationInDays": "1"
+                        }
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "1187410e-186b-4831-bf01-ebee21ce7309"
+                }
+            }
+        },
+        "ParseBucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+                "Bucket": {
+                    "Ref": "ParseBucket"
+                },
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Sid": "AddPerm",
+                            "Effect": "Allow",
+                            "Principal": "*",
+                            "Action": "s3:GetObject",
+                            "Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "arn:aws:s3:::",
+                                        {
+                                            "Ref": "ParseBucket"
+                                        },
+                                        "/*"
+                                    ]
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "46250c59-23d1-43ea-ad6d-822c84ff668a"
+                }
+            }
+        },
+        "WebsiteContent": {
+            "Type": "AWS::CloudFormation::CustomResource",
+            "Properties": {
+                "ServiceToken": {
+                    "Fn::GetAtt": [
+                        "CopyWebAssets",
+                        "Arn"
+                    ]
+                },
+                "SourceBucket": {
+                    "Ref": "SourceBucket"
+                },
+                "SourcePrefix": {
+                    "Ref": "SourcePrefix"
+                },
+                "Bucket": {
+                    "Ref": "ParseBucket"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "6050e87c-2743-4047-bfcd-c8902673d95d"
+                }
+            },
+            "DependsOn": [
+                "ParseBucket"
+            ]
+        },
+        "S3CopyRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "Path": "/",
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "lambda.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "Policies": [
+                    {
+                        "PolicyName": "S3Access",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Sid": "AllowLogging",
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents"
+                                    ],
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Sid": "SourceBucketReadAccess",
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "s3:ListBucket",
+                                        "s3:GetObject"
+                                    ],
+                                    "Resource": [
+                                        {
+                                            "Fn::Sub": "arn:aws:s3:::${SourceBucket}"
+                                        },
+                                        {
+                                            "Fn::Sub": "arn:aws:s3:::${SourceBucket}/${SourcePrefix}/*"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "Sid": "DestBucketWriteAccess",
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "s3:ListBucket",
+                                        "s3:GetObject",
+                                        "s3:PutObject",
+                                        "s3:PutObjectAcl",
+                                        "s3:PutObjectVersionAcl",
+                                        "s3:DeleteObject",
+                                        "s3:DeleteObjectVersion"
+                                    ],
+                                    "Resource": [
+                                        {
+                                            "Fn::Join": [
+                                                "",
+                                                [
+                                                    "arn:aws:s3:::",
+                                                    {
+                                                        "Ref": "ParseBucket"
+                                                    }
+                                                ]
+                                            ]
+                                        },
+                                        {
+                                            "Fn::Join": [
+                                                "",
+                                                [
+                                                    "arn:aws:s3:::",
+                                                    {
+                                                        "Ref": "ParseBucket"
+                                                    },
+                                                    "/*"
+                                                ]
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "f5344b03-cc54-4286-a74c-9db67025bc82"
+                }
+            }
+        },
+        "CopyWebAssets": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Description": "Copies objects from a source S3 bucket to a destination",
+                "Handler": "copywebassets.handler",
+                "Runtime": "python2.7",
+                "Role": {
+                    "Fn::GetAtt": [
+                        "S3CopyRole",
+                        "Arn"
+                    ]
+                },
+                "Timeout": 300,
+                "Code": {
+                    "S3Bucket": {
+                        "Fn::Join": [
+                            "-",
+                            [
+                                "rodeolabz",
+                                {
+                                    "Ref": "AWS::Region"
+                                }
+                            ]
+                        ]
+                    },
+                    "S3Key": "cf5k/cf5k_resources.zip"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "120d4ea2-ea63-4bef-815d-dd2c766a772c"
+                }
+            }
+        },
+        "TestSummaryTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "rekog_label",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "rekog_type",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "timestamp_updated",
+                        "AttributeType": "N"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "rekog_label",
+                        "KeyType": "HASH"
+                    }
+                ],
+                "ProvisionedThroughput": {
+                    "ReadCapacityUnits": "20",
+                    "WriteCapacityUnits": "20"
+                },
+                "GlobalSecondaryIndexes": [
+                    {
+                        "IndexName": "rekog_type-timestamp_updated-index",
+                        "KeySchema": [
+                            {
+                                "AttributeName": "rekog_type",
+                                "KeyType": "HASH"
+                            },
+                            {
+                                "AttributeName": "timestamp_updated",
+                                "KeyType": "RANGE"
+                            }
+                        ],
+                        "Projection": {
+                            "ProjectionType": "ALL"
+                        },
+                        "ProvisionedThroughput": {
+                            "ReadCapacityUnits": "20",
+                            "WriteCapacityUnits": "20"
+                        }
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "a8b2a1f8-27e9-4beb-878a-df0b7d628296"
+                }
+            }
+        },
+        "TestMainTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "id_filename",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "id_type",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "id_filename",
+                        "KeyType": "HASH"
+                    }
+                ],
+                "ProvisionedThroughput": {
+                    "ReadCapacityUnits": "10",
+                    "WriteCapacityUnits": "10"
+                },
+                "GlobalSecondaryIndexes": [
+                    {
+                        "IndexName": "id_type-id_filename-index",
+                        "KeySchema": [
+                            {
+                                "AttributeName": "id_type",
+                                "KeyType": "HASH"
+                            },
+                            {
+                                "AttributeName": "id_filename",
+                                "KeyType": "RANGE"
+                            }
+                        ],
+                        "Projection": {
+                            "ProjectionType": "ALL"
+                        },
+                        "ProvisionedThroughput": {
+                            "ReadCapacityUnits": "10",
+                            "WriteCapacityUnits": "10"
+                        }
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "e644b37e-bfce-4033-bb9a-b24f73805ad4"
+                }
+            }
+        },
+        "TestListTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "label",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "label_sort",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "label",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "label_sort",
+                        "KeyType": "RANGE"
+                    }
+                ],
+                "ProvisionedThroughput": {
+                    "ReadCapacityUnits": "5",
+                    "WriteCapacityUnits": "5"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "cc42d6b4-bbbb-4d2c-8a5b-97856d98ea9e"
+                }
+            }
+        }
+    },
+    "Outputs": {
+        "S3BucketName": {
+            "Value": {
+                "Ref": "ParseBucket"
+            },
+            "Description": "S3 Parse Bucket Name"
+        },
+        "SummaryTable": {
+            "Value": {
+                "Ref": "TestSummaryTable"
+            }
+        },
+        "MainTable": {
+            "Value": {
+                "Ref": "TestMainTable"
+            }
+        },
+        "ListTable": {
+            "Value": {
+                "Ref": "TestListTable"
+            }
+        }
+    },
+    "Parameters": {
+        "SourceBucket": {
+            "Type": "String",
+            "Default": "rodeolabz",
+            "Description": "S3 bucket containing the code deployed by this template"
+        },
+        "SourcePrefix": {
+            "Type": "String",
+            "Default": "cf5k/website/",
+            "Description": "Key prefix for resources referenced from the WebsiteFilesBucket"
+        }
+    }
+}

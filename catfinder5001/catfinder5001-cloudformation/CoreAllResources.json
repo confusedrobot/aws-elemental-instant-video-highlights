@@ -1,0 +1,389 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "This template creates all the resources needed by the core CF5K.",
+    "Metadata": {
+        "AWS::CloudFormation::Designer": {
+            "63d3bd0b-8b73-4e7f-af2b-bdcee72c9f78": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": -90,
+                    "y": 260
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "71f69562-6796-4f2b-92c7-e984f034f202": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 30,
+                    "y": 140
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "61bc036d-065f-42ef-a254-1a7c7b604866": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": -90,
+                    "y": 40
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "d0e73ea0-b8e8-4667-a5af-e8c6fa42058a": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": -90,
+                    "y": 140
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "ca0030d3-c8bf-4142-bd79-23ba40769d63": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": -200,
+                    "y": 120
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "f656d7f0-f69e-4624-967f-14fe0a617837": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": -210,
+                    "y": 40
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "ab7d6216-1a8c-418b-9637-4f39b4e02d43": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": -400,
+                    "y": 120
+                },
+                "z": 0,
+                "embeds": [],
+                "dependson": [
+                    "ca0030d3-c8bf-4142-bd79-23ba40769d63"
+                ]
+            },
+            "6991dc5a-0d54-452f-85ba-8caaa8d08119": {
+                "source": {
+                    "id": "d0e73ea0-b8e8-4667-a5af-e8c6fa42058a"
+                },
+                "target": {
+                    "id": "ca0030d3-c8bf-4142-bd79-23ba40769d63"
+                },
+                "z": 11
+            },
+            "5b428950-4b07-47da-9a30-08d5f235320e": {
+                "source": {
+                    "id": "ab7d6216-1a8c-418b-9637-4f39b4e02d43"
+                },
+                "target": {
+                    "id": "ca0030d3-c8bf-4142-bd79-23ba40769d63"
+                },
+                "z": 12
+            }
+        }
+    },
+    "Resources": {
+        "IAMModuleStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": "https://s3.amazonaws.com/rodeolabz-us-east-1/cf5k/IAMResources.json",
+                "TimeoutInMinutes": 5
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "63d3bd0b-8b73-4e7f-af2b-bdcee72c9f78"
+                }
+            }
+        },
+        "MediaPackageModuleStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": "https://s3.amazonaws.com/rodeolabz-us-east-1/cf5k/MediaPackageResources.json",
+                "TimeoutInMinutes": 5
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "71f69562-6796-4f2b-92c7-e984f034f202"
+                }
+            }
+        },
+        "MediaLiveModuleStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": "https://s3.amazonaws.com/rodeolabz-us-east-1/cf5k/MediaLiveResources.json",
+                "TimeoutInMinutes": 5,
+                "Parameters": {
+                    "HLSPrimarySource": {
+                        "Ref": "HLSPrimarySource"
+                    },
+                    "HLSSecondarySource": {
+                        "Ref": "HLSPrimarySource"
+                    },
+                    "PackagerPrimaryChannelUrl": {
+                        "Fn::GetAtt": [
+                            "MediaPackageModuleStack",
+                            "Outputs.MediaPackagePrimaryChannelUrl"
+                        ]
+                    },
+                    "PackagerPrimaryChannelUsername": {
+                        "Fn::GetAtt": [
+                            "MediaPackageModuleStack",
+                            "Outputs.MediaPackagePrimaryChannelUsername"
+                        ]
+                    },
+                    "PackagerPrimaryChannelPassword": {
+                        "Fn::GetAtt": [
+                            "MediaPackageModuleStack",
+                            "Outputs.MediaPackagePrimaryChannelPassword"
+                        ]
+                    },
+                    "PackagerSecondaryChannelUrl": {
+                        "Fn::GetAtt": [
+                            "MediaPackageModuleStack",
+                            "Outputs.MediaPackageSecondaryChannelUrl"
+                        ]
+                    },
+                    "PackagerSecondaryChannelUsername": {
+                        "Fn::GetAtt": [
+                            "MediaPackageModuleStack",
+                            "Outputs.MediaPackageSecondaryChannelUsername"
+                        ]
+                    },
+                    "PackagerSecondaryChannelPassword": {
+                        "Fn::GetAtt": [
+                            "MediaPackageModuleStack",
+                            "Outputs.MediaPackageSecondaryChannelPassword"
+                        ]
+                    },
+                    "MediaLiveAccessRoleArn": {
+                        "Fn::GetAtt": [
+                            "IAMModuleStack",
+                            "Outputs.MediaLiveAccessRoleArn"
+                        ]
+                    },
+                    "S3BucketName": {
+                        "Fn::GetAtt": [
+                            "BucketTablesModuleStack",
+                            "Outputs.S3BucketName"
+                        ]
+                    }
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "d0e73ea0-b8e8-4667-a5af-e8c6fa42058a"
+                }
+            },
+            "DependsOn": [
+                "BucketTablesModuleStack"
+            ]
+        },
+        "ParseModuleStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": "https://s3.amazonaws.com/rodeolabz-us-east-1/cf5k/Parse.json",
+                "TimeoutInMinutes": 5,
+                "Parameters": {
+                    "MediaLiveChannelName": {
+                        "Fn::GetAtt": [
+                            "MediaLiveModuleStack",
+                            "Outputs.MediaLiveChannelName"
+                        ]
+                    },
+                    "EnablePrekog": {
+                        "Ref": "EnablePrekog"
+                    },
+                    "RekogLabel": {
+                        "Ref": "RekogLabel"
+                    },
+                    "PrekogLambda": {
+                        "Fn::GetAtt": [
+                            "PrekogVODModuleStack",
+                            "Outputs.PrekogLambda"
+                        ]
+                    },
+                    "MainTable": {
+                        "Fn::GetAtt": [
+                            "BucketTablesModuleStack",
+                            "Outputs.MainTable"
+                        ]
+                    },
+                    "SummaryTable": {
+                        "Fn::GetAtt": [
+                            "BucketTablesModuleStack",
+                            "Outputs.SummaryTable"
+                        ]
+                    },
+                    "ListTable": {
+                        "Fn::GetAtt": [
+                            "BucketTablesModuleStack",
+                            "Outputs.ListTable"
+                        ]
+                    }
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "61bc036d-065f-42ef-a254-1a7c7b604866"
+                }
+            }
+        },
+        "BucketNotificationModuleStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": "https://s3.amazonaws.com/rodeolabz-us-east-1/cf5k/BucketNotifyConfiguration.json",
+                "TimeoutInMinutes": 5,
+                "Parameters": {
+                    "S3BucketName": {
+                        "Fn::GetAtt": [
+                            "BucketTablesModuleStack",
+                            "Outputs.S3BucketName"
+                        ]
+                    },
+                    "ParseLambdaARN": {
+                        "Fn::GetAtt": [
+                            "ParseModuleStack",
+                            "Outputs.ParseLambdaARN"
+                        ]
+                    }
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "f656d7f0-f69e-4624-967f-14fe0a617837"
+                }
+            },
+            "DependsOn": [
+                "ParseModuleStack"
+            ]
+        },
+        "PrekogVODModuleStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": "https://s3.amazonaws.com/rodeolabz-us-east-1/cf5k/PrekogVOD.json",
+                "TimeoutInMinutes": 5,
+                "Parameters": {
+                    "MediaPackageEndpointURL": {
+                        "Fn::GetAtt": [
+                            "MediaPackageModuleStack",
+                            "Outputs.MediaPackagePrimaryChannelLiveEndpointUrl"
+                        ]
+                    },
+                    "S3Bucket": {
+                        "Fn::GetAtt": [
+                            "BucketTablesModuleStack",
+                            "Outputs.S3BucketName"
+                        ]
+                    },
+                    "MainTable": {
+                        "Fn::GetAtt": [
+                            "BucketTablesModuleStack",
+                            "Outputs.MainTable"
+                        ]
+                    },
+                    "SummaryTable": {
+                        "Fn::GetAtt": [
+                            "BucketTablesModuleStack",
+                            "Outputs.SummaryTable"
+                        ]
+                    },
+                    "ListTable": {
+                        "Fn::GetAtt": [
+                            "BucketTablesModuleStack",
+                            "Outputs.ListTable"
+                        ]
+                    }
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "ab7d6216-1a8c-418b-9637-4f39b4e02d43"
+                }
+            },
+            "DependsOn": [
+                "BucketTablesModuleStack"
+            ]
+        },
+        "BucketTablesModuleStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": "https://s3.amazonaws.com/rodeolabz-us-east-1/cf5k/BucketTables.json",
+                "TimeoutInMinutes": 5
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "ca0030d3-c8bf-4142-bd79-23ba40769d63"
+                }
+            }
+        }
+    },
+    "Parameters": {
+        "HLSPrimarySource": {
+            "Default": "http://d2qohgpffhaffh.cloudfront.net/HLS/vanlife/withad/sdr_uncage_vanlife_admarker_60sec.m3u8",
+            "Description": "URL of the primary HLS pull source",
+            "Type": "String"
+        },
+        "HLSSecondarySource": {
+            "Default": "http://d2qohgpffhaffh.cloudfront.net/HLS/vanlife/withad/sdr_uncage_vanlife_admarker_60sec.m3u8",
+            "Description": "URL of the secondary HLS pull source",
+            "Type": "String"
+        },
+        "EnablePrekog": {
+            "Default": "false",
+            "Description": "Indicates whether a label is to be matched",
+            "Type": "String"
+        },
+        "RekogLabel": {
+            "Description": "If Prekog enabled, this is the label to search for (eg. Cat)",
+            "Type": "String"
+        }
+    },
+    "Outputs": {
+        "MediaPackagePrimaryChannelLiveEndpointUrl": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "MediaPackageModuleStack",
+                    "Outputs.MediaPackagePrimaryChannelLiveEndpointUrl"
+                ]
+            },
+            "Description": "URL for the primary channel live origin endpoint"
+        },
+        "MediaPackageSecondaryChannelLiveEndpointUrl": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "MediaPackageModuleStack",
+                    "Outputs.MediaPackageSecondaryChannelLiveEndpointUrl"
+                ]
+            },
+            "Description": "URL for the secondary channel live origin endpoint"
+        }
+    }
+}

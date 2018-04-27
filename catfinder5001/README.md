@@ -31,7 +31,7 @@ This is a refactor of the original "catfinder 5000" shown at re:Invent 2017 that
 
 |Region|Launch Template|
 |---|---|
-|**N. Virginia** (us-east-1)|[![Launch](catfinder5001-cloudformation/deploy-to-aws.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=catfinder5001&templateURL=https://s3.amazonaws.com/cf5k-us-east-1/cloudformation/CoreAllResources.json)|
+|**N. Virginia** (us-east-1)|[![Launch](catfinder5001-cloudformation/deploy-to-aws.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=catfinder5001&templateURL=https://s3.amazonaws.com/rodeolabz-us-east-1/cf5k/CoreAllResources.json)|
 
 Parameters:
 
@@ -44,6 +44,9 @@ Parameters:
 1. *RekogLabel* - If Prekog enabled, this is the label to search for ( Totes needs to be "Cat" )
 
 **Note:** MediaLive has a 5 channel maximum and this will use 2 of the 10 channel maximum for MediaPackage.
+
+[More information here](catfinder5001-cloudformation/) on the CloudFormation templates.
+
 
 ### Step-by-step
 

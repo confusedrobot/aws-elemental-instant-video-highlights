@@ -1,6 +1,8 @@
 # Instant video highlights: build your own Live-to-VOD workflow with machine-learning image recognition
 
-Demonstration of a frame accurate live-to-VOD solution with automatic machine-learning image recognition Introduction to the AWS services used to create the demonstration Explanation of how the services were combined to create a solution
+Demonstration of a frame accurate live-to-VOD solution with automatic machine-learning image recognition.
+Introduction to the AWS services used to create the demonstration. 
+Explanation of how the services were combined to create a solution.
 
 ## catfinder5001 "the original"
 
@@ -14,15 +16,15 @@ This is a refactor of the original "catfinder 5000" shown at re:Invent 2017 that
 
 *Interested?* [Deployment Instructions](catfinder5002/)
 
-This is also known as "Ad Kitten" shown at CES2017, this uses the catfinder5001-parse's DynamoDB "summary" table with the catfinder5002-ads code that simulates an ADS server for AWS Elemental MediaTailor. The website is used to demostrate the end to end and is optional.
+This is also known as "Ad Kitten" shown at CES2017, this uses the catfinder5001-parse's DynamoDB "summary" table with the catfinder5002-ads code that simulates an ADS server for AWS Elemental MediaTailor. The website is used to demonstrate the end to end and is optional.
 
 ![catfinder5002 diagram](catfinder5002/catfinder5002.png)
 
-## catfinder5003 "Auomated Transcribe and Translate"
+## catfinder5003 "Automated Transcribe and Translate"
 
 *Interested?* [Deployment Instructions](catfinder5003/)
 
-This is an evolution of the OG catfinder5001 that includes the ability to extend analysis from visual ( Amazon Rekognition ) to audible ( Amazon Translate ). The transcription of the livestream is then thrown throw Amazon Translate and Amazon Comprehend and displayed in a nifty webpage interface. One could easily append an automation with these results, and that part is up to you!
+This is an evolution of the OG catfinder5001 that includes the ability to extend analysis from visual ( Amazon Rekognition ) to audible ( Amazon Translate ). The transcription of the livestream is then thrown through Amazon Translate and Amazon Comprehend and displayed in a nifty webpage interface. One could easily append an automation with these results, and that part is up to you!
 
 ![catfinder5003 diagram](catfinder5003/catfinder5003.png)
 

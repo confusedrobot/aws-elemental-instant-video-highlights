@@ -1,6 +1,6 @@
-# catfinder5003 "Auomated Transcribe and Translate"
+# catfinder5003 "Automated Transcribe and Translate"
 
-This is an evolution of the OG catfinder5001 that includes the ability to extend analysis from visual ( Amazon Rekognition ) to audible ( Amazon Translate ). The transcription of the livestream is then thrown throw Amazon Translate and Amazon Comprehend and displayed in a nifty webpage interface. One could easily append an automation with these results, and that part is up to you!
+This is an evolution of the OG catfinder5001 that includes the ability to extend analysis from visual ( Amazon Rekognition ) to audible ( Amazon Translate ). The transcription of the livestream is then thrown through Amazon Translate and Amazon Comprehend and displayed in a nifty webpage interface. One could easily append an automation with these results, and that part is up to you!
 
 ![catfinder5003 diagram](catfinder5003.png)
 
@@ -14,9 +14,9 @@ Instructions on how to create your own by hand.
 
 You have two options:
 
-1. Follow these ok instructions: [Catfinder5000 Static Webstite Hosting](../catfinder5000/LAB/1_StaticWebHosting/README.md)
+1. Follow these ok instructions: [Catfinder5000 Static Website Hosting](../catfinder5000/LAB/1_StaticWebHosting/README.md)
 
-2. You can ue my python script: [create_bucket.py](catfinder5003-createchannel/create_bucket.py)
+2. You can use my python script: [create_bucket.py](catfinder5003-createchannel/create_bucket.py)
 
 #### Create MediaLive and MediaPackage Channels
 
@@ -58,7 +58,7 @@ Intrigued? [catfinder5003-parse code](catfinder5003-parse/)
 
 ### catfinder5003-transcribe
 
-The "Transcribe" Lambda function uses the WAV files created by the "Parse" Lambda function to concat them in to a 1 minute audio archive. These 1 minute WAV file is then passed to Amazon Transcribe and the results are placed in the DynamoDB database. These results are also passed to Amazon Translate and Amazon Comprehend.
+The "Transcribe" Lambda function uses the WAV files created by the "Parse" Lambda function to concat them into a 1 minute audio archive. These 1 minute WAV file is then passed to Amazon Transcribe and the results are placed in the DynamoDB database. These results are also passed to Amazon Translate and Amazon Comprehend.
 
 Intrigued? [catfinder5003-transcribe code](catfinder5003-transcribe/)
 
